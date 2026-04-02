@@ -8,6 +8,7 @@ import {
 /* ─── CONSTANTS ─────────────────────────────── */
 const WA_LINK = "https://wa.me/390736342914?text=Ciao%20Debora!%20Vorrei%20prenotare%20un%20appuntamento%20%F0%9F%92%87%E2%80%8D%E2%99%80%EF%B8%8F"
 const PHONE   = "tel:+390736342914"
+const BASE    = import.meta.env.BASE_URL
 
 /* ─── HOOK: visibility ───────────────────────── */
 function useVisible(threshold = 0.12) {
@@ -180,15 +181,15 @@ const reviews = [
 ]
 
 const galleryItems = [
-  { label: 'Balayage Naturale',            sub: 'Colore',      gradient: 'linear-gradient(160deg,#2c1810 0%,#7a4a2a 50%,#c49a6c 100%)', img: '/gallery-1.jpg?v=2' },
-  { label: 'Bob Liscio',                   sub: 'Taglio',      gradient: 'linear-gradient(160deg,#0d0d0d 0%,#2a2a2a 50%,#4a4a4a 100%)', img: '/gallery-2.jpg?v=2' },
-  { label: 'Onde Morbide',                 sub: 'Piega',       gradient: 'linear-gradient(160deg,#1a0a05 0%,#5c3317 50%,#9b6b3a 100%)', img: '/gallery-3.jpg?v=2' },
-  { label: 'Colorazione Ramata',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#4a0a00 0%,#a03020 50%,#d4622a 100%)', img: '/gallery-4.jpg?v=3' },
-  { label: 'Capelli Ricci Definiti',       sub: 'Trattamento', gradient: 'linear-gradient(160deg,#1a0e05 0%,#4a2e10 50%,#7a5a2a 100%)', img: '/gallery-5.jpg?v=3' },
-  { label: 'Pixie Cut',                    sub: 'Taglio',      gradient: 'linear-gradient(160deg,#0a0a0a 0%,#1e1e1e 50%,#3a3a3a 100%)', img: '/gallery-6.jpg?v=2' },
-  { label: 'Highlights Biondi',            sub: 'Colore',      gradient: 'linear-gradient(160deg,#2a1e00 0%,#7a5c10 50%,#c9a227 100%)', img: '/gallery-7.jpg?v=2' },
-  { label: 'Beach Waves',                  sub: 'Piega',       gradient: 'linear-gradient(160deg,#1e1205 0%,#6b4820 50%,#b07d3a 100%)', img: '/gallery-8.jpg?v=2' },
-  { label: 'Castano Cioccolato',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#1a0800 0%,#3d1a0a 50%,#6b3316 100%)', img: '/gallery-9.jpg?v=2' },
+  { label: 'Balayage Naturale',            sub: 'Colore',      gradient: 'linear-gradient(160deg,#2c1810 0%,#7a4a2a 50%,#c49a6c 100%)', img: `${BASE}lavori/Balayage Naturale.jpg` },
+  { label: 'Bob Liscio',                   sub: 'Taglio',      gradient: 'linear-gradient(160deg,#0d0d0d 0%,#2a2a2a 50%,#4a4a4a 100%)', img: `${BASE}lavori/Bob Liscio.jpg` },
+  { label: 'Onde Morbide',                 sub: 'Piega',       gradient: 'linear-gradient(160deg,#1a0a05 0%,#5c3317 50%,#9b6b3a 100%)', img: `${BASE}lavori/Onde Morbide.jpg` },
+  { label: 'Colorazione Ramata',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#4a0a00 0%,#a03020 50%,#d4622a 100%)', img: `${BASE}lavori/Colorazione Ramata.jpg` },
+  { label: 'Capelli Ricci Definiti',       sub: 'Trattamento', gradient: 'linear-gradient(160deg,#1a0e05 0%,#4a2e10 50%,#7a5a2a 100%)', img: `${BASE}lavori/Capelli Ricci Definiti.jpg` },
+  { label: 'Pixie Cut',                    sub: 'Taglio',      gradient: 'linear-gradient(160deg,#0a0a0a 0%,#1e1e1e 50%,#3a3a3a 100%)', img: `${BASE}lavori/Pixie Cut.jpg` },
+  { label: 'Highlights Biondi',            sub: 'Colore',      gradient: 'linear-gradient(160deg,#2a1e00 0%,#7a5c10 50%,#c9a227 100%)', img: `${BASE}lavori/Highlights Biondi.jpg` },
+  { label: 'Beach Waves',                  sub: 'Piega',       gradient: 'linear-gradient(160deg,#1e1205 0%,#6b4820 50%,#b07d3a 100%)', img: `${BASE}lavori/Beach Waves.jpg` },
+  { label: 'Castano Cioccolato',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#1a0800 0%,#3d1a0a 50%,#6b3316 100%)', img: `${BASE}lavori/Castano Cioccolato.jpg` },
 ]
 
 /* ─── GLOBAL STYLES ──────────────────────────── */
@@ -212,7 +213,7 @@ function Navbar() {
     <nav style={{ position:'fixed',top:0,left:0,right:0,zIndex:1000, background:scrolled?'rgba(14,14,14,0.97)':'transparent', backdropFilter:scrolled?'blur(16px)':'none', borderBottom:scrolled?'1px solid rgba(196,18,48,0.18)':'none', padding:scrolled?'0.9rem 0':'1.5rem 0', transition:'all 0.45s ease' }}>
       <div style={{ maxWidth:1280,margin:'0 auto',padding:'0 2rem',display:'flex',alignItems:'center',justifyContent:'space-between' }}>
         <a href="#home" style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:'0.7rem' }}>
-          <img src="/symbol.svg?v=2" alt="" style={{ height:scrolled?'36px':'44px',width:'auto',transition:'height 0.4s ease' }}/>
+          <img src={`${BASE}symbol.svg`} alt="" style={{ height:scrolled?'36px':'44px',width:'auto',transition:'height 0.4s ease' }}/>
           <span style={{ fontFamily:'"Cormorant Garamond",serif',fontSize:scrolled?'1.05rem':'1.2rem',fontWeight:600,color:'#F5F0EA',letterSpacing:'0.04em',transition:'font-size 0.4s ease' }}>Parrucchieria Debora</span>
         </a>
         <div className="desk-nav" style={{ display:'flex',alignItems:'center',gap:'2.5rem' }}>
@@ -261,7 +262,7 @@ function Hero() {
       {/* VIDEO BACKGROUND */}
       <video autoPlay muted loop playsInline
         style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',transform:`translateY(${scrollY*0.25}px) scale(1.1)`,transition:'transform 0.1s linear',pointerEvents:'none' }}>
-        <source src="/hero.mp4" type="video/mp4"/>
+        <source src={`${BASE}hero.mp4`} type="video/mp4"/>
       </video>
 
       {/* Layered overlays — dark base + brand red tint */}
@@ -373,7 +374,7 @@ function About() {
           <div style={{ background:'#1C1C1C',position:'relative',overflow:'hidden' }}>
             {/* animated red top bar */}
             <div style={{ position:'absolute',top:0,left:0,right:0,height:3,zIndex:2,background:'linear-gradient(90deg,transparent,#C41230,transparent)',backgroundSize:'200% 100%',animation:vL?'shimmerLine 2.5s 0.5s ease both':'none' }}/>
-            <img src="/staff.jpg?v=2" alt="Team Parrucchieria Debora" style={{ width:'100%',height:'auto',display:'block',objectFit:'cover' }}/>
+            <img src={`${BASE}staff.jpg`} alt="Team Parrucchieria Debora" style={{ width:'100%',height:'auto',display:'block',objectFit:'cover' }}/>
             {/* caption overlay */}
             <div style={{ position:'absolute',bottom:0,left:0,right:0,padding:'2rem',background:'linear-gradient(to top,rgba(0,0,0,0.82) 0%,transparent 100%)' }}>
               <p style={{ fontFamily:'"Cormorant Garamond",serif',fontSize:'1.15rem',fontStyle:'italic',fontWeight:400,color:'rgba(245,240,234,0.85)',lineHeight:1.7,textAlign:'center' }}>
@@ -713,7 +714,7 @@ function Footer() {
       <div style={{ maxWidth:1280,margin:'0 auto' }}>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:'3rem',marginBottom:'3.5rem' }}>
           <div>
-            <img src="/symbol.svg?v=2" alt="Parrucchieria Debora" style={{ height:72,width:'auto',marginBottom:'1.25rem',opacity:0.9 }}/>
+            <img src={`${BASE}symbol.svg`} alt="Parrucchieria Debora" style={{ height:72,width:'auto',marginBottom:'1.25rem',opacity:0.9 }}/>
             <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.75rem',fontWeight:300,color:'rgba(245,240,234,0.35)',lineHeight:1.85,marginBottom:'1.25rem' }}>
               Il tuo salone di fiducia ad Ascoli Piceno da oltre 6 anni.
             </p>
