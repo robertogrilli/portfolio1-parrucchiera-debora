@@ -454,14 +454,18 @@ function About() {
 /* ─── SERVICES ───────────────────────────────── */
 function Services() {
   const [active, setActive] = useState('Tutti')
-  const [serviceList, setServiceList] = useState(services)
+  const [overrides, setOverrides] = useState({})
 
   useEffect(() => {
     getDocs(collection(db, 'prezzi')).then(snap => {
-      if (!snap.empty) setServiceList(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      const map = {}
+      snap.docs.forEach(d => { map[d.id] = d.data() })
+      setOverrides(map)
     }).catch(() => {})
   }, [])
 
+  // Merge: per ogni servizio hardcoded, applica l'override Firestore se esiste (ID = name)
+  const serviceList = services.map(s => ({ ...s, ...(overrides[s.name] || {}) }))
   const filtered = active === 'Tutti' ? serviceList : serviceList.filter(s => s.cat === active)
   return (
     <section id="servizi" style={{ padding:'9rem 2rem',background:'#111',overflow:'hidden' }}>
@@ -525,18 +529,21 @@ function ServiceCard({s,i}) {
 /* ─── GALLERY ────────────────────────────────── */
 function Gallery() {
   const [lightbox, setLightbox] = useState(null)
-  const [items, setItems] = useState(galleryItems)
+  const [overrides, setOverrides] = useState({})
 
   useEffect(() => {
     getDocs(collection(db, 'gallery')).then(snap => {
-      if (!snap.empty) {
-        setItems(snap.docs.map(d => {
-          const data = d.data()
-          return { label: data.label, sub: data.sub, img: data.url, gradient: 'linear-gradient(160deg,#1a0800 0%,#3d1a0a 50%,#6b3316 100%)' }
-        }))
-      }
+      const map = {}
+      snap.docs.forEach(d => { map[d.id] = d.data() })
+      setOverrides(map)
     }).catch(() => {})
   }, [])
+
+  // Merge: per ogni foto hardcoded, applica l'override Firestore se esiste (ID = label)
+  const items = galleryItems.map(g => {
+    const ov = overrides[g.label]
+    return ov ? { ...g, img: ov.url, sub: ov.sub || g.sub } : g
+  })
 
   return (
     <section id="i-miei-lavori" style={{ padding:'9rem 2rem',background:'#F5F0EA',position:'relative' }}>

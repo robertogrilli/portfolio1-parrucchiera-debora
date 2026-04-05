@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth, db } from '../firebase'
 import {
-  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, writeBatch
+  collection, getDocs, deleteDoc, doc, setDoc
 } from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, Image, Tag, Info, Trash2, Plus, Upload, Check, X, Pencil } from 'lucide-react'
@@ -114,10 +114,9 @@ async function uploadToCloudinary(file) {
 
 /* ─── GALLERY TAB ───────────────────────────────── */
 function GalleryTab() {
-  const [firestoreItems, setFirestoreItems] = useState(null)
+  const [overrides, setOverrides] = useState(null) // map label→data
   const [replacing, setReplacing] = useState(null)
   const [uploadMsg, setUploadMsg] = useState({})
-  const [editingMeta, setEditingMeta] = useState(null) // { key, label, sub }
   const [showAddForm, setShowAddForm] = useState(false)
   const [newItem, setNewItem] = useState({ label: '', sub: '' })
   const [addUploading, setAddUploading] = useState(false)
@@ -128,76 +127,53 @@ function GalleryTab() {
   const loadGallery = async () => {
     try {
       const snap = await getDocs(collection(db, 'gallery'))
-      setFirestoreItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      const map = {}
+      snap.docs.forEach(d => { map[d.id] = d.data() })
+      setOverrides(map)
     } catch (err) {
       console.error('Firestore:', err)
-      setFirestoreItems([])
+      setOverrides({})
     }
   }
 
-  const usingDefaults = firestoreItems !== null && firestoreItems.length === 0
-  const displayItems = usingDefaults
-    ? DEFAULT_GALLERY.map(i => ({ ...i, isDefault: true }))
-    : (firestoreItems || []).map(i => ({ ...i, isDefault: false }))
+  // Merge: ogni default + override Firestore (ID = label)
+  const displayItems = DEFAULT_GALLERY.map(g => {
+    const ov = overrides?.[g.label]
+    return ov
+      ? { ...g, url: ov.url, sub: ov.sub || g.sub, type: ov.type || 'image', hasOverride: true }
+      : { ...g, url: g.img, type: 'image', hasOverride: false }
+  })
 
-  /* Sostituisci file (immagine o video) */
+  /* Sostituisci file */
   const handleReplace = async (item, file) => {
-    const key = item.id || item.label
-    setReplacing(key)
-    setUploadMsg(m => ({ ...m, [key]: '' }))
+    setReplacing(item.label)
+    setUploadMsg(m => ({ ...m, [item.label]: '' }))
     try {
       const uploaded = await uploadToCloudinary(file)
-      if (item.isDefault) {
-        // Scrivi TUTTE le foto default in Firestore, con questa sostituita
-        const existing = await getDocs(collection(db, 'gallery'))
-        const batch = writeBatch(db)
-        existing.docs.forEach(d => batch.delete(d.ref))
-        for (const g of DEFAULT_GALLERY) {
-          const isReplaced = g.label === item.label
-          batch.set(doc(collection(db, 'gallery')), isReplaced
-            ? { label: g.label, sub: g.sub, url: uploaded.url, publicId: uploaded.publicId, type: uploaded.type, createdAt: new Date().toISOString() }
-            : { label: g.label, sub: g.sub, url: g.img, publicId: '', type: 'image', createdAt: new Date().toISOString() }
-          )
-        }
-        await batch.commit()
-      } else {
-        await updateDoc(doc(db, 'gallery', item.id), {
-          url: uploaded.url, publicId: uploaded.publicId, type: uploaded.type,
-          updatedAt: new Date().toISOString(),
-        })
-      }
-      setUploadMsg(m => ({ ...m, [key]: 'ok' }))
+      // Doc ID = label → upsert diretto, nessun batch
+      await setDoc(doc(db, 'gallery', item.label), {
+        label: item.label, sub: item.sub,
+        url: uploaded.url, publicId: uploaded.publicId, type: uploaded.type,
+        updatedAt: new Date().toISOString(),
+      })
+      setUploadMsg(m => ({ ...m, [item.label]: 'ok' }))
       loadGallery()
     } catch (err) {
-      setUploadMsg(m => ({ ...m, [key]: err.message }))
+      setUploadMsg(m => ({ ...m, [item.label]: err.message }))
     } finally {
       setReplacing(null)
     }
   }
 
-  /* Modifica titolo/categoria */
-  const handleSaveMeta = async () => {
-    if (!editingMeta) return
-    const { key, id, label, sub } = editingMeta
-    try {
-      await updateDoc(doc(db, 'gallery', id), { label, sub })
-      setUploadMsg(m => ({ ...m, [key]: 'ok' }))
-      setEditingMeta(null)
-      loadGallery()
-    } catch (err) {
-      setUploadMsg(m => ({ ...m, [key]: err.message }))
-    }
-  }
-
-  /* Elimina */
-  const handleDelete = async (id) => {
-    if (!confirm('Eliminare questo elemento dalla galleria?')) return
-    await deleteDoc(doc(db, 'gallery', id))
-    setUploadMsg({})
+  /* Ripristina default (elimina override) */
+  const handleReset = async (label) => {
+    if (!confirm('Ripristinare la foto originale?')) return
+    await deleteDoc(doc(db, 'gallery', label))
+    setUploadMsg(m => ({ ...m, [label]: '' }))
     loadGallery()
   }
 
-  /* Aggiungi nuovo */
+  /* Aggiungi elemento extra (non è un default) */
   const handleAdd = async (e) => {
     e.preventDefault()
     const file = e.target.querySelector('input[type=file]').files[0]
@@ -206,7 +182,7 @@ function GalleryTab() {
     setAddMsg('')
     try {
       const uploaded = await uploadToCloudinary(file)
-      await addDoc(collection(db, 'gallery'), {
+      await setDoc(doc(db, 'gallery', newItem.label), {
         label: newItem.label, sub: newItem.sub || 'Lavoro',
         url: uploaded.url, publicId: uploaded.publicId, type: uploaded.type,
         createdAt: new Date().toISOString(),
@@ -222,41 +198,22 @@ function GalleryTab() {
     }
   }
 
-  if (firestoreItems === null) return <Spinner />
+  if (overrides === null) return <Spinner />
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ ...sectionTitle, marginBottom: '0.25rem' }}>Galleria Foto & Video</h2>
-          {usingDefaults && (
-            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', color: 'rgba(245,240,234,0.35)', margin: 0 }}>
-              Foto predefinite del sito — clicca "Sostituisci" su qualsiasi elemento per caricare la tua versione.
-            </p>
-          )}
-        </div>
-        <button onClick={() => setShowAddForm(s => !s)} style={btnPrimary}>
-          <Plus size={14} /> Aggiungi nuovo
-        </button>
+        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Galleria Foto & Video</h2>
+        <button onClick={() => setShowAddForm(s => !s)} style={btnPrimary}><Plus size={14} /> Aggiungi nuovo</button>
       </div>
 
-      {/* Form aggiungi */}
       {showAddForm && (
         <form onSubmit={handleAdd} style={{ background: '#161616', padding: '1.5rem', marginBottom: '2rem', border: '1px solid rgba(196,18,48,0.2)' }}>
-          <p style={subTitle}>Nuovo elemento galleria</p>
+          <p style={subTitle}>Nuovo elemento</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={labelStyle}>Titolo *</label>
-              <input value={newItem.label} onChange={e => setNewItem(p => ({ ...p, label: e.target.value }))} required placeholder="es. Balayage Naturale" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Categoria</label>
-              <input value={newItem.sub} onChange={e => setNewItem(p => ({ ...p, sub: e.target.value }))} placeholder="es. Colore, Taglio, Video" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>File (foto o video) *</label>
-              <input type="file" accept="image/*,video/*" required style={{ ...inputStyle, padding: '0.5rem' }} />
-            </div>
+            <div><label style={labelStyle}>Titolo *</label><input value={newItem.label} onChange={e => setNewItem(p => ({ ...p, label: e.target.value }))} required placeholder="es. Riccio Naturale" style={inputStyle} /></div>
+            <div><label style={labelStyle}>Categoria</label><input value={newItem.sub} onChange={e => setNewItem(p => ({ ...p, sub: e.target.value }))} placeholder="es. Colore" style={inputStyle} /></div>
+            <div><label style={labelStyle}>File *</label><input type="file" accept="image/*,video/*" required style={{ ...inputStyle, padding: '0.5rem' }} /></div>
           </div>
           {addMsg && <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.75rem', color: '#C41230', marginBottom: '1rem' }}>{addMsg}</p>}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -266,101 +223,51 @@ function GalleryTab() {
         </form>
       )}
 
-      {/* Griglia */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
         {displayItems.map(item => {
-          const key = item.id || item.label
-          const isReplacing = replacing === key
-          const msg = uploadMsg[key]
-          const isEditingThis = editingMeta?.key === key
-          const srcUrl = item.isDefault ? item.img : item.url
+          const isReplacing = replacing === item.label
+          const msg = uploadMsg[item.label]
           const isVideo = item.type === 'video'
+          const srcUrl = item.url
 
           return (
-            <div key={key} style={{ background: '#161616', border: `1px solid ${msg === 'ok' ? 'rgba(76,175,80,0.35)' : 'rgba(255,255,255,0.05)'}`, overflow: 'hidden' }}>
-
-              {/* Preview */}
+            <div key={item.label} style={{ background: '#161616', border: `1px solid ${msg === 'ok' ? 'rgba(76,175,80,0.35)' : item.hasOverride ? 'rgba(196,18,48,0.25)' : 'rgba(255,255,255,0.05)'}`, overflow: 'hidden' }}>
               <div style={{ position: 'relative', aspectRatio: '1' }}>
                 {isVideo
                   ? <video src={srcUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: isReplacing ? 0.4 : 1 }} muted playsInline />
                   : <img src={srcUrl} alt={item.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: isReplacing ? 0.4 : 1 }} />
                 }
-                {isVideo && (
-                  <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'rgba(196,18,48,0.85)', padding: '0.15rem 0.5rem' }}>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#F5F0EA' }}>VIDEO</span>
+                {!item.hasOverride && (
+                  <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.6)', padding: '0.15rem 0.5rem' }}>
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.48rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(245,240,234,0.4)' }}>Default</span>
                   </div>
                 )}
-                {item.isDefault && (
-                  <div style={{ position: 'absolute', top: isVideo ? '1.75rem' : '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.65)', padding: '0.15rem 0.5rem' }}>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(245,240,234,0.5)' }}>Predefinita</span>
-                  </div>
+                {item.hasOverride && (
+                  <button onClick={() => handleReset(item.label)} title="Ripristina default"
+                    style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.7)', border: 'none', color: 'rgba(245,240,234,0.6)', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.6rem' }}>
+                    ↩
+                  </button>
                 )}
                 {isReplacing && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
-                    <div style={{ width: 32, height: 32, border: '3px solid rgba(196,18,48,0.3)', borderTopColor: '#C41230', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <div style={{ width: 28, height: 28, border: '3px solid rgba(196,18,48,0.3)', borderTopColor: '#C41230', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                   </div>
-                )}
-                {!item.isDefault && (
-                  <button onClick={() => handleDelete(item.id)} title="Elimina"
-                    style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(196,18,48,0.85)', border: 'none', color: '#fff', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <Trash2 size={12} />
-                  </button>
                 )}
               </div>
-
-              {/* Info + azioni */}
-              <div style={{ padding: '0.85rem' }}>
-                {isEditingThis ? (
-                  <div>
-                    <input
-                      value={editingMeta.label}
-                      onChange={e => setEditingMeta(m => ({ ...m, label: e.target.value }))}
-                      style={{ ...inputStyle, marginBottom: '0.4rem', fontSize: '0.75rem' }}
-                      placeholder="Titolo"
-                    />
-                    <input
-                      value={editingMeta.sub}
-                      onChange={e => setEditingMeta(m => ({ ...m, sub: e.target.value }))}
-                      style={{ ...inputStyle, marginBottom: '0.6rem', fontSize: '0.7rem' }}
-                      placeholder="Categoria"
-                    />
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button onClick={handleSaveMeta} style={{ ...btnPrimary, padding: '0.4rem 0.75rem', fontSize: '0.58rem' }}><Check size={11} /> Salva</button>
-                      <button onClick={() => setEditingMeta(null)} style={{ ...btnSecondary, padding: '0.4rem 0.75rem', fontSize: '0.58rem' }}><X size={11} /></button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.15rem' }}>
-                      <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.72rem', fontWeight: 600, color: '#F5F0EA' }}>{item.label}</div>
-                      {!item.isDefault && (
-                        <button
-                          onClick={() => setEditingMeta({ key, id: item.id, label: item.label, sub: item.sub || '' })}
-                          style={{ background: 'none', border: 'none', color: 'rgba(245,240,234,0.3)', cursor: 'pointer', padding: '0.1rem', flexShrink: 0 }}
-                          title="Modifica titolo/categoria"
-                        >
-                          <Pencil size={12} />
-                        </button>
-                      )}
-                    </div>
-                    <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.58rem', color: '#C41230', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>{item.sub}</div>
-
-                    {msg === 'ok' ? (
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: '#4caf50', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Check size={12} /> Aggiornato!
-                      </p>
-                    ) : msg ? (
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: '#C41230', margin: 0 }}>Errore: {msg}</p>
-                    ) : (
-                      <label style={{ ...btnSecondary, display: 'flex', cursor: isReplacing ? 'not-allowed' : 'pointer', justifyContent: 'center', opacity: isReplacing ? 0.5 : 1 }}>
-                        <Upload size={12} style={{ marginRight: '0.4rem' }} />
-                        Sostituisci file
-                        <input type="file" accept="image/*,video/*" style={{ display: 'none' }} disabled={isReplacing}
-                          onChange={e => { if (e.target.files[0]) handleReplace(item, e.target.files[0]) }} />
-                      </label>
-                    )}
-                  </>
-                )}
+              <div style={{ padding: '0.75rem' }}>
+                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', fontWeight: 600, color: '#F5F0EA', marginBottom: '0.1rem' }}>{item.label}</div>
+                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.56rem', color: '#C41230', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>{item.sub}</div>
+                {msg === 'ok'
+                  ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.62rem', color: '#4caf50', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={11} /> Aggiornato!</p>
+                  : msg ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.62rem', color: '#C41230', margin: 0 }}>Errore: {msg}</p>
+                  : (
+                    <label style={{ ...btnSecondary, display: 'flex', cursor: isReplacing ? 'not-allowed' : 'pointer', justifyContent: 'center', padding: '0.45rem 0.75rem', opacity: isReplacing ? 0.5 : 1 }}>
+                      <Upload size={11} style={{ marginRight: '0.35rem' }} /> Sostituisci
+                      <input type="file" accept="image/*,video/*" style={{ display: 'none' }} disabled={isReplacing}
+                        onChange={e => { if (e.target.files[0]) handleReplace(item, e.target.files[0]) }} />
+                    </label>
+                  )
+                }
               </div>
             </div>
           )
@@ -372,8 +279,8 @@ function GalleryTab() {
 
 /* ─── PREZZI TAB ────────────────────────────────── */
 function PrezziTab() {
-  const [firestoreItems, setFirestoreItems] = useState(null)
-  const [editing, setEditing] = useState(null) // key dell'item in modifica
+  const [overrides, setOverrides] = useState(null) // map name→data
+  const [editing, setEditing] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newItem, setNewItem] = useState({ cat: '', name: '', desc: '', price: '' })
   const [saving, setSaving] = useState(false)
@@ -383,38 +290,30 @@ function PrezziTab() {
   const loadPrezzi = async () => {
     try {
       const snap = await getDocs(collection(db, 'prezzi'))
-      setFirestoreItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      const map = {}
+      snap.docs.forEach(d => { map[d.id] = d.data() })
+      setOverrides(map)
     } catch (err) {
       console.error('Firestore:', err)
-      setFirestoreItems([])
+      setOverrides({})
     }
   }
 
-  const usingDefaults = firestoreItems !== null && firestoreItems.length === 0
-  const displayItems = usingDefaults
-    ? DEFAULT_SERVICES.map(s => ({ ...s, isDefault: true, key: s.name }))
-    : (firestoreItems || []).map(s => ({ ...s, isDefault: false, key: s.id }))
+  // Merge: ogni default + override Firestore (ID = name)
+  const displayItems = DEFAULT_SERVICES.map(s => {
+    const ov = overrides?.[s.name]
+    return ov
+      ? { ...s, ...ov, hasOverride: true }
+      : { ...s, hasOverride: false }
+  })
 
-  /* Salva modifica */
+  /* Salva modifica — upsert con doc ID = name */
   const handleSaveEdit = async (data) => {
     setSaving(true)
     try {
-      if (data.isDefault) {
-        // Elimina doc orfani esistenti e riscrivi tutti i default con la modifica
-        const existing = await getDocs(collection(db, 'prezzi'))
-        const batch = writeBatch(db)
-        existing.docs.forEach(d => batch.delete(d.ref))
-        for (const s of DEFAULT_SERVICES) {
-          const isEdited = s.name === data.name
-          batch.set(doc(collection(db, 'prezzi')), isEdited
-            ? { cat: data.cat, name: data.name, desc: data.desc, price: data.price, icon: s.icon || '' }
-            : { cat: s.cat, name: s.name, desc: s.desc, price: s.price, icon: s.icon || '' }
-          )
-        }
-        await batch.commit()
-      } else {
-        await updateDoc(doc(db, 'prezzi', data.id), { cat: data.cat, name: data.name, desc: data.desc, price: data.price, icon: data.icon || '' })
-      }
+      await setDoc(doc(db, 'prezzi', data.name), {
+        cat: data.cat, name: data.name, desc: data.desc, price: data.price, icon: data.icon || '',
+      })
       setEditing(null)
       loadPrezzi()
     } catch (err) {
@@ -424,57 +323,44 @@ function PrezziTab() {
     }
   }
 
-  /* Aggiungi nuovo */
+  /* Ripristina default (elimina override) */
+  const handleReset = async (name) => {
+    if (!confirm('Ripristinare il valore originale del codice?')) return
+    await deleteDoc(doc(db, 'prezzi', name))
+    loadPrezzi()
+  }
+
+  /* Aggiungi servizio extra */
   const handleAdd = async (e) => {
     e.preventDefault()
     setSaving(true)
-    await addDoc(collection(db, 'prezzi'), { ...newItem })
+    await setDoc(doc(db, 'prezzi', newItem.name), { ...newItem, icon: '' })
     setNewItem({ cat: '', name: '', desc: '', price: '' })
     setShowAddForm(false)
     setSaving(false)
     loadPrezzi()
   }
 
-  /* Elimina */
-  const handleDelete = async (id) => {
-    if (!confirm('Eliminare questo servizio?')) return
-    await deleteDoc(doc(db, 'prezzi', id))
-    loadPrezzi()
-  }
-
-  if (firestoreItems === null) return <Spinner />
+  if (overrides === null) return <Spinner />
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ ...sectionTitle, marginBottom: '0.25rem' }}>Prezzi & Servizi</h2>
-          {usingDefaults && (
-            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', color: 'rgba(245,240,234,0.35)', margin: 0 }}>
-              Servizi predefiniti del sito — clicca "Modifica" per cambiare un servizio e salvarlo.
-            </p>
-          )}
-        </div>
-        <button onClick={() => setShowAddForm(s => !s)} style={btnPrimary}>
-          <Plus size={14} /> Aggiungi servizio
-        </button>
+        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Prezzi & Servizi</h2>
+        <button onClick={() => setShowAddForm(s => !s)} style={btnPrimary}><Plus size={14} /> Aggiungi servizio</button>
       </div>
 
-      {/* Form aggiungi nuovo */}
       {showAddForm && (
         <form onSubmit={handleAdd} style={{ background: '#161616', padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(196,18,48,0.2)' }}>
           <p style={subTitle}>Nuovo servizio</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-            {[['Categoria', 'cat', 'Taglio, Piega…'], ['Nome servizio', 'name', 'Taglio donna'], ['Prezzo', 'price', 'da €25']].map(([label, key, ph]) => (
-              <div key={key}>
-                <label style={labelStyle}>{label} *</label>
-                <input value={newItem[key]} onChange={e => setNewItem(p => ({ ...p, [key]: e.target.value }))} placeholder={ph} required style={inputStyle} />
-              </div>
+            {[['Categoria', 'cat', 'Taglio, Piega…'], ['Nome *', 'name', 'Taglio donna'], ['Prezzo', 'price', 'da €25']].map(([label, key, ph]) => (
+              <div key={key}><label style={labelStyle}>{label}</label><input value={newItem[key]} onChange={e => setNewItem(p => ({ ...p, [key]: e.target.value }))} placeholder={ph} required={key === 'name'} style={inputStyle} /></div>
             ))}
           </div>
           <div style={{ marginBottom: '1rem' }}>
             <label style={labelStyle}>Descrizione</label>
-            <textarea value={newItem.desc} onChange={e => setNewItem(p => ({ ...p, desc: e.target.value }))} rows={2} placeholder="Breve descrizione del servizio" style={{ ...inputStyle, resize: 'vertical' }} />
+            <textarea value={newItem.desc} onChange={e => setNewItem(p => ({ ...p, desc: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button type="submit" disabled={saving} style={btnPrimary}><Check size={14} /> Salva</button>
@@ -483,27 +369,26 @@ function PrezziTab() {
         </form>
       )}
 
-      {/* Lista servizi */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {displayItems.map(item => (
-          <div key={item.key} style={{ background: '#161616', padding: '1.1rem 1.25rem', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-            {editing === item.key ? (
+          <div key={item.name} style={{ background: '#161616', padding: '1rem 1.25rem', border: `1px solid ${item.hasOverride ? 'rgba(196,18,48,0.25)' : 'rgba(255,255,255,0.05)'}`, display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+            {editing === item.name ? (
               <EditServiceRow item={item} onSave={handleSaveEdit} onCancel={() => setEditing(null)} saving={saving} />
             ) : (
               <>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C41230', flexShrink: 0 }}>{item.cat}</span>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.85rem', fontWeight: 600, color: '#F5F0EA' }}>{item.name}</span>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.82rem', color: '#C41230', fontWeight: 700, marginLeft: 'auto', flexShrink: 0 }}>{item.price}</span>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '1rem' }}>{item.icon}</span>
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C41230' }}>{item.cat}</span>
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.83rem', fontWeight: 600, color: '#F5F0EA' }}>{item.name}</span>
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.8rem', color: '#C41230', fontWeight: 700, marginLeft: 'auto' }}>{item.price}</span>
                   </div>
-                  {item.desc && <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.72rem', color: 'rgba(245,240,234,0.35)', margin: 0, lineHeight: 1.6 }}>{item.desc}</p>}
-                  {item.isDefault && <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(245,240,234,0.2)' }}>Predefinito</span>}
+                  {item.desc && <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', color: 'rgba(245,240,234,0.35)', margin: 0, lineHeight: 1.6 }}>{item.desc}</p>}
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-                  <button onClick={() => setEditing(item.key)} style={btnSecondary}><Pencil size={13} /> Modifica</button>
-                  {!item.isDefault && (
-                    <button onClick={() => handleDelete(item.id)} style={{ ...btnSecondary, borderColor: 'rgba(196,18,48,0.3)', color: '#C41230' }}><Trash2 size={13} /></button>
+                  <button onClick={() => setEditing(item.name)} style={btnSecondary}><Pencil size={12} /></button>
+                  {item.hasOverride && (
+                    <button onClick={() => handleReset(item.name)} title="Ripristina default" style={{ ...btnSecondary, padding: '0.6rem 0.6rem' }}>↩</button>
                   )}
                 </div>
               </>
