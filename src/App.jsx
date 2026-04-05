@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import {
   Scissors, Star, MapPin, Phone, Clock,
   ChevronDown, Menu, X, Sparkles, Award, Heart, Zap, Check,
   MessageCircle, ZoomIn
 } from 'lucide-react'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase'
+import AdminLogin from './pages/AdminLogin'
+import AdminDashboard from './pages/AdminDashboard'
+import ProtectedRoute from './components/ProtectedRoute'
 
 /* ─── CONSTANTS ─────────────────────────────── */
 const WA_LINK = "https://wa.me/390736342914?text=Ciao%20Debora!%20Vorrei%20prenotare%20un%20appuntamento%20%F0%9F%92%87%E2%80%8D%E2%99%80%EF%B8%8F"
@@ -432,7 +438,18 @@ function About() {
 /* ─── SERVICES ───────────────────────────────── */
 function Services() {
   const [active, setActive] = useState('Tutti')
-  const filtered = active === 'Tutti' ? services : services.filter(s => s.cat === active)
+  const [serviceList, setServiceList] = useState(services)
+
+  useEffect(() => {
+    getDocs(collection(db, 'prezzi')).then(snap => {
+      if (!snap.empty) {
+        setServiceList(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      }
+    }).catch(() => {})
+  }, [])
+
+  const cats = ['Tutti', ...new Set(serviceList.map(s => s.cat).filter(Boolean))]
+  const filtered = active === 'Tutti' ? serviceList : serviceList.filter(s => s.cat === active)
   return (
     <section id="servizi" style={{ padding:'9rem 2rem',background:'#111',overflow:'hidden' }}>
       <div style={{ maxWidth:1280,margin:'0 auto' }}>
@@ -440,7 +457,7 @@ function Services() {
 
         {/* Filter pills */}
         <div style={{ display:'flex',flexWrap:'wrap',gap:'0.5rem',justifyContent:'center',marginBottom:'3.5rem' }}>
-          {serviceCategories.map(cat => (
+          {cats.map(cat => (
             <button key={cat} onClick={()=>setActive(cat)}
               style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.55rem 1.4rem',border:`1.5px solid ${active===cat?'#C41230':'rgba(245,240,234,0.15)'}`,background:active===cat?'#C41230':'transparent',color:active===cat?'#F5F0EA':'rgba(245,240,234,0.45)',cursor:'pointer',transition:'all 0.25s ease' }}
               onMouseEnter={e=>{ if(active!==cat){ e.currentTarget.style.borderColor='rgba(196,18,48,0.5)'; e.currentTarget.style.color='#F5F0EA' }}}
@@ -495,6 +512,19 @@ function ServiceCard({s,i}) {
 /* ─── GALLERY ────────────────────────────────── */
 function Gallery() {
   const [lightbox, setLightbox] = useState(null)
+  const [items, setItems] = useState(galleryItems)
+
+  useEffect(() => {
+    getDocs(collection(db, 'gallery')).then(snap => {
+      if (!snap.empty) {
+        setItems(snap.docs.map(d => {
+          const data = d.data()
+          return { label: data.label, sub: data.sub, img: data.url, gradient: 'linear-gradient(160deg,#1a0800 0%,#3d1a0a 50%,#6b3316 100%)' }
+        }))
+      }
+    }).catch(() => {})
+  }, [])
+
   return (
     <section id="i-miei-lavori" style={{ padding:'9rem 2rem',background:'#F5F0EA',position:'relative' }}>
       <div style={{ maxWidth:1280,margin:'0 auto' }}>
@@ -504,7 +534,7 @@ function Gallery() {
           {/* PLACEHOLDER — sostituire le tile con foto reali dei lavori */}
         </p>
         <div className="gallery-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'0.5rem' }}>
-          {galleryItems.map((g,i)=><GalleryItem key={g.label} g={g} i={i} onOpen={()=>setLightbox(g)}/>)}
+          {items.map((g,i)=><GalleryItem key={g.label} g={g} i={i} onOpen={()=>setLightbox(g)}/>)}
         </div>
         <div style={{ textAlign:'center',marginTop:'3rem' }}>
           <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.82rem',fontWeight:300,color:'#888',marginBottom:'1.5rem' }}>
@@ -657,6 +687,19 @@ function CTABanner() {
 
 /* ─── CONTACT ────────────────────────────────── */
 function Contact() {
+  const [info, setInfo] = useState({
+    indirizzo: "Via Celso Ulpiani, 15\n63100 Ascoli Piceno (AP)",
+    telefono: "0736 342914",
+    orari: "Lun – Ven: 9:00 – 18:30\nSabato: 9:00 – 17:00\nDomenica: chiuso",
+  })
+
+  useEffect(() => {
+    getDocs(collection(db, 'info')).then(snap => {
+      const d = snap.docs.find(d => d.id === 'principale')
+      if (d) setInfo(prev => ({ ...prev, ...d.data() }))
+    }).catch(() => {})
+  }, [])
+
   return (
     <section id="contatti" style={{ padding:'9rem 2rem',background:'#F5F0EA' }}>
       <div style={{ maxWidth:1280,margin:'0 auto' }}>
@@ -665,9 +708,9 @@ function Contact() {
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'2rem',maxWidth:900,margin:'0 auto' }}>
 
           {/* Info cards */}
-          <InfoCard icon={MapPin} label="Indirizzo"          val={"Via Celso Ulpiani, 15\n63100 Ascoli Piceno (AP)"} idx={0}/>
-          <InfoCard icon={Phone}  label="Telefono & WhatsApp" val="0736 342914"                                       idx={1}/>
-          <InfoCard icon={Clock}  label="Orari"              val={"Lun – Ven: 9:00 – 18:30\nSabato: 9:00 – 17:00\nDomenica: chiuso"} idx={2}/>
+          <InfoCard icon={MapPin} label="Indirizzo"          val={info.indirizzo}  idx={0}/>
+          <InfoCard icon={Phone}  label="Telefono & WhatsApp" val={info.telefono}   idx={1}/>
+          <InfoCard icon={Clock}  label="Orari"              val={info.orari}      idx={2}/>
         </div>
 
         {/* CTA buttons */}
@@ -780,8 +823,8 @@ function SectionHeader({ tag, title, dark = false }) {
   )
 }
 
-/* ─── APP ────────────────────────────────────── */
-export default function App() {
+/* ─── HOME ───────────────────────────────────── */
+function Home() {
   return (
     <>
       <Navbar/>
@@ -795,5 +838,18 @@ export default function App() {
       <Contact/>
       <Footer/>
     </>
+  )
+}
+
+/* ─── APP ────────────────────────────────────── */
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home/>}/>
+      <Route path="/admin" element={<AdminLogin/>}/>
+      <Route path="/admin/dashboard" element={
+        <ProtectedRoute><AdminDashboard/></ProtectedRoute>
+      }/>
+    </Routes>
   )
 }

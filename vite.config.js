@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   base: '/portfolio1-parrucchiera-debora/',
+  server: { port: 5200 },
   plugins: [
     react(),
     tailwindcss(),
