@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/portfolio1-parrucchiera-debora/',
+  base: '/parrucchieria-debora/',
   server: { port: 5200 },
   plugins: [
     react(),
