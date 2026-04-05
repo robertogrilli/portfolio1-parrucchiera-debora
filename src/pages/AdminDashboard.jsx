@@ -89,8 +89,13 @@ function GalleryTab() {
   useEffect(() => { loadGallery() }, [])
 
   const loadGallery = async () => {
-    const snap = await getDocs(collection(db, 'gallery'))
-    setFirestoreItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    try {
+      const snap = await getDocs(collection(db, 'gallery'))
+      setFirestoreItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch (err) {
+      console.error('Firestore error:', err)
+      setFirestoreItems([]) // mostra default invece di bloccarsi
+    }
   }
 
   // Foto visibili: se Firestore ha dati usa quelli, altrimenti default
@@ -412,11 +417,13 @@ function InfoTab() {
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
-    getDocs(collection(db, 'info')).then(snap => {
-      const d = snap.docs.find(d => d.id === INFO_ID)
-      if (d) setInfo(d.data())
-      setLoading(false)
-    })
+    getDocs(collection(db, 'info'))
+      .then(snap => {
+        const d = snap.docs.find(d => d.id === INFO_ID)
+        if (d) setInfo(d.data())
+      })
+      .catch(err => console.error('Firestore error:', err))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleSave = async (e) => {
