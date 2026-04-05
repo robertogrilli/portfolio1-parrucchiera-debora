@@ -12,24 +12,24 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 const BASE = import.meta.env.BASE_URL
 
 const DEFAULT_SERVICES = [
-  { cat:'Taglio',      name:'Taglio donna',           desc:'Taglio su misura con consulenza personalizzata. Shampoo e asciugatura inclusi.',           price:'da €25' },
-  { cat:'Taglio',      name:'Taglio + piega',          desc:'Taglio personalizzato con shampoo e messa in piega.',                                      price:'da €38' },
-  { cat:'Taglio',      name:'Frangia',                 desc:'Ripassata e rifinizione frangia.',                                                          price:'da €10' },
-  { cat:'Piega',       name:'Piega classica',          desc:'Shampoo e messa in piega con phon e spazzola.',                                            price:'da €15' },
-  { cat:'Piega',       name:'Piega sposa / cerimonia', desc:'Piega elaborata per matrimoni, cerimonie e grandi occasioni.',                             price:'da €60' },
-  { cat:'Piega',       name:'Raccolto',                desc:'Acconciatura raccolta elegante su misura.',                                                 price:'da €40' },
-  { cat:'Colore',      name:'Colorazione monocolore',  desc:'Colorazione permanente uniforme su tutta la lunghezza.',                                   price:'da €40' },
-  { cat:'Colore',      name:'Radici',                  desc:'Ritocco radici con colorazione permanente.',                                               price:'da €30' },
-  { cat:'Colore',      name:'Meches classiche',        desc:'Schiariture classiche con stagnola per riflessi naturali.',                                price:'da €50' },
-  { cat:'Colore',      name:'Balayage / Schiariture',  desc:'Schiariture a mano libera per un effetto naturale, solare e pieno di luce.',              price:'da €75' },
-  { cat:'Colore',      name:'Correzione colore',       desc:'Correzione e rifacimento completo del colore.',                                            price:'da €90' },
-  { cat:'Trattamenti', name:'Trattamento Olaplex',     desc:'Trattamento ristrutturante Olaplex per capelli danneggiati da colore o calore.',           price:'da €30' },
-  { cat:'Trattamenti', name:'Cheratina lisciante',     desc:'Lisciatura duratura con cheratina, effetto anti-crespo fino a 3 mesi.',                   price:'da €85' },
-  { cat:'Trattamenti', name:'Trattamento rigenerante', desc:'Maschera intensiva rigenerante per capelli secchi, fragili o danneggiati.',               price:'da €22' },
-  { cat:'Trattamenti', name:'Permanente',              desc:'Permanente classica o ricci morbidi con consulenza inclusa.',                             price:'da €50' },
-  { cat:'Sposa',       name:'Acconciatura sposa',      desc:'Acconciatura nuziale con consulenza personalizzata e prova inclusa.',                     price:'da €120' },
-  { cat:'Sposa',       name:'Prova acconciatura',      desc:'Sessione di prova per acconciatura sposa o cerimonia.',                                   price:'da €50' },
-  { cat:'Sposa',       name:'Acconciatura cerimonia',  desc:'Acconciatura elaborata per cerimonie, feste e eventi speciali.',                          price:'da €55' },
+  { cat:'Taglio',      icon:'✂',  name:'Taglio donna',           desc:'Taglio su misura con consulenza personalizzata. Shampoo e asciugatura inclusi.',           price:'da €25' },
+  { cat:'Taglio',      icon:'✂',  name:'Taglio + piega',          desc:'Taglio personalizzato con shampoo e messa in piega.',                                      price:'da €38' },
+  { cat:'Taglio',      icon:'✂',  name:'Frangia',                 desc:'Ripassata e rifinizione frangia.',                                                          price:'da €10' },
+  { cat:'Piega',       icon:'💨', name:'Piega classica',          desc:'Shampoo e messa in piega con phon e spazzola.',                                            price:'da €15' },
+  { cat:'Piega',       icon:'💍', name:'Piega sposa / cerimonia', desc:'Piega elaborata per matrimoni, cerimonie e grandi occasioni.',                             price:'da €60' },
+  { cat:'Piega',       icon:'🎀', name:'Raccolto',                desc:'Acconciatura raccolta elegante su misura.',                                                 price:'da €40' },
+  { cat:'Colore',      icon:'🎨', name:'Colorazione monocolore',  desc:'Colorazione permanente uniforme su tutta la lunghezza.',                                   price:'da €40' },
+  { cat:'Colore',      icon:'🎨', name:'Radici',                  desc:'Ritocco radici con colorazione permanente.',                                               price:'da €30' },
+  { cat:'Colore',      icon:'✨', name:'Meches classiche',        desc:'Schiariture classiche con stagnola per riflessi naturali.',                                price:'da €50' },
+  { cat:'Colore',      icon:'☀', name:'Balayage / Schiariture',  desc:'Schiariture a mano libera per un effetto naturale, solare e pieno di luce.',              price:'da €75' },
+  { cat:'Colore',      icon:'🔄', name:'Correzione colore',       desc:'Correzione e rifacimento completo del colore.',                                            price:'da €90' },
+  { cat:'Trattamenti', icon:'💎', name:'Trattamento Olaplex',     desc:'Trattamento ristrutturante Olaplex per capelli danneggiati da colore o calore.',           price:'da €30' },
+  { cat:'Trattamenti', icon:'🌿', name:'Cheratina lisciante',     desc:'Lisciatura duratura con cheratina, effetto anti-crespo fino a 3 mesi.',                   price:'da €85' },
+  { cat:'Trattamenti', icon:'💧', name:'Trattamento rigenerante', desc:'Maschera intensiva rigenerante per capelli secchi, fragili o danneggiati.',               price:'da €22' },
+  { cat:'Trattamenti', icon:'〰', name:'Permanente',              desc:'Permanente classica o ricci morbidi con consulenza inclusa.',                             price:'da €50' },
+  { cat:'Sposa',       icon:'👰', name:'Acconciatura sposa',      desc:'Acconciatura nuziale con consulenza personalizzata e prova inclusa.',                     price:'da €120' },
+  { cat:'Sposa',       icon:'🪞', name:'Prova acconciatura',      desc:'Sessione di prova per acconciatura sposa o cerimonia.',                                   price:'da €50' },
+  { cat:'Sposa',       icon:'🌸', name:'Acconciatura cerimonia',  desc:'Acconciatura elaborata per cerimonie, feste e eventi speciali.',                          price:'da €55' },
 ]
 
 const DEFAULT_GALLERY = [
@@ -407,13 +407,13 @@ function PrezziTab() {
         for (const s of DEFAULT_SERVICES) {
           const isEdited = s.name === data.name
           batch.set(doc(collection(db, 'prezzi')), isEdited
-            ? { cat: data.cat, name: data.name, desc: data.desc, price: data.price }
-            : { cat: s.cat, name: s.name, desc: s.desc, price: s.price }
+            ? { cat: data.cat, name: data.name, desc: data.desc, price: data.price, icon: s.icon || '' }
+            : { cat: s.cat, name: s.name, desc: s.desc, price: s.price, icon: s.icon || '' }
           )
         }
         await batch.commit()
       } else {
-        await updateDoc(doc(db, 'prezzi', data.id), { cat: data.cat, name: data.name, desc: data.desc, price: data.price })
+        await updateDoc(doc(db, 'prezzi', data.id), { cat: data.cat, name: data.name, desc: data.desc, price: data.price, icon: data.icon || '' })
       }
       setEditing(null)
       loadPrezzi()
