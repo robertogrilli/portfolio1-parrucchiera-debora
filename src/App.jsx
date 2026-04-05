@@ -202,7 +202,7 @@ const galleryItems = [
   { label: 'Balayage Naturale',            sub: 'Colore',      gradient: 'linear-gradient(160deg,#2c1810 0%,#7a4a2a 50%,#c49a6c 100%)', img: `${BASE}lavori/Balayage Naturale.jpg` },
   { label: 'Bob Liscio',                   sub: 'Taglio',      gradient: 'linear-gradient(160deg,#0d0d0d 0%,#2a2a2a 50%,#4a4a4a 100%)', img: `${BASE}lavori/Bob Liscio.jpg` },
   { label: 'Onde Morbide',                 sub: 'Piega',       gradient: 'linear-gradient(160deg,#1a0a05 0%,#5c3317 50%,#9b6b3a 100%)', img: `${BASE}lavori/Onde Morbide.jpg` },
-  { label: 'Colorazione Ramata',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#4a0a00 0%,#a03020 50%,#d4622a 100%)', img: `${BASE}lavori/Colorazione Ramata.jpg` },
+  { label: 'Colorazione Ramata',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#4a0a00 0%,#a03020 50%,#d4622a 100%)', img: `${BASE}lavori/kzUDHC9LPVl645UomcQxe_EnDt8DOn.jpg` },
   { label: 'Capelli Ricci Definiti',       sub: 'Trattamento', gradient: 'linear-gradient(160deg,#1a0e05 0%,#4a2e10 50%,#7a5a2a 100%)', img: `${BASE}lavori/Capelli Ricci Definiti.jpg` },
   { label: 'Pixie Cut',                    sub: 'Taglio',      gradient: 'linear-gradient(160deg,#0a0a0a 0%,#1e1e1e 50%,#3a3a3a 100%)', img: `${BASE}lavori/Pixie Cut.jpg` },
   { label: 'Highlights Biondi',            sub: 'Colore',      gradient: 'linear-gradient(160deg,#2a1e00 0%,#7a5c10 50%,#c9a227 100%)', img: `${BASE}lavori/Highlights Biondi.jpg` },
@@ -467,8 +467,9 @@ function Services() {
   const defaultNames = new Set(services.map(s => s.name))
   const merged = services.map(s => ({ ...s, ...(overrides[s.name] || {}) }))
   const extras = Object.entries(overrides).filter(([id]) => !defaultNames.has(id)).map(([, d]) => d)
-  const serviceList = [...merged, ...extras]
-  const filtered = active === 'Tutti' ? serviceList : serviceList.filter(s => s.cat === active)
+  const normCat = c => { const t = (c || '').trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '' }
+  const serviceList = [...merged, ...extras].map(s => ({ ...s, cat: normCat(s.cat) }))
+  const filtered = active === 'Tutti' ? serviceList : serviceList.filter(s => s.cat.toLowerCase() === active.toLowerCase())
   return (
     <section id="servizi" style={{ padding:'9rem 2rem',background:'#111',overflow:'hidden' }}>
       <div style={{ maxWidth:1280,margin:'0 auto' }}>
@@ -476,7 +477,7 @@ function Services() {
 
         {/* Filter pills */}
         <div style={{ display:'flex',flexWrap:'wrap',gap:'0.5rem',justifyContent:'center',marginBottom:'3.5rem' }}>
-          {['Tutti', ...new Set(serviceList.map(s => s.cat).filter(Boolean))].map(cat => (
+          {['Tutti', ...new Set(serviceList.map(s => s.cat ? s.cat.trim().charAt(0).toUpperCase() + s.cat.trim().slice(1).toLowerCase() : '').filter(Boolean))].map(cat => (
             <button key={cat} onClick={()=>setActive(cat)}
               style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.62rem',fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.55rem 1.4rem',border:`1.5px solid ${active===cat?'#C41230':'rgba(245,240,234,0.15)'}`,background:active===cat?'#C41230':'transparent',color:active===cat?'#F5F0EA':'rgba(245,240,234,0.45)',cursor:'pointer',transition:'all 0.25s ease' }}
               onMouseEnter={e=>{ if(active!==cat){ e.currentTarget.style.borderColor='rgba(196,18,48,0.5)'; e.currentTarget.style.color='#F5F0EA' }}}
@@ -544,7 +545,7 @@ function Gallery() {
   const defaultLabels = new Set(galleryItems.map(g => g.label))
   const merged = galleryItems.map(g => {
     const ov = overrides[g.label]
-    return ov ? { ...g, img: ov.url, sub: ov.sub || g.sub } : g
+    return ov ? { ...g, img: ov.url, sub: ov.sub || g.sub, label: ov.label || g.label } : g
   })
   const extras = Object.entries(overrides).filter(([id]) => !defaultLabels.has(id)).map(([, d]) => ({
     label: d.label, sub: d.sub, img: d.url, gradient: 'linear-gradient(160deg,#1a0800 0%,#3d1a0a 50%,#6b3316 100%)'

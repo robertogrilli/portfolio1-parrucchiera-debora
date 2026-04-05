@@ -36,7 +36,7 @@ const DEFAULT_GALLERY = [
   { label: 'Balayage Naturale',      sub: 'Colore',      img: `${BASE}lavori/Balayage Naturale.jpg`,      type: 'image' },
   { label: 'Bob Liscio',             sub: 'Taglio',      img: `${BASE}lavori/Bob Liscio.jpg`,             type: 'image' },
   { label: 'Onde Morbide',           sub: 'Piega',       img: `${BASE}lavori/Onde Morbide.jpg`,           type: 'image' },
-  { label: 'Colorazione Ramata',     sub: 'Colore',      img: `${BASE}lavori/Colorazione Ramata.jpg`,     type: 'image' },
+  { label: 'Colorazione Ramata',     sub: 'Colore',      img: `${BASE}lavori/kzUDHC9LPVl645UomcQxe_EnDt8DOn.jpg`,     type: 'image' },
   { label: 'Capelli Ricci Definiti', sub: 'Trattamento', img: `${BASE}lavori/Capelli Ricci Definiti.jpg`, type: 'image' },
   { label: 'Pixie Cut',              sub: 'Taglio',      img: `${BASE}lavori/Pixie Cut.jpg`,              type: 'image' },
   { label: 'Highlights Biondi',      sub: 'Colore',      img: `${BASE}lavori/Highlights Biondi.jpg`,      type: 'image' },
@@ -121,6 +121,8 @@ function GalleryTab() {
   const [newItem, setNewItem] = useState({ label: '', sub: '' })
   const [addUploading, setAddUploading] = useState(false)
   const [addMsg, setAddMsg] = useState('')
+  const [editingMeta, setEditingMeta] = useState(null)
+  const [editForm, setEditForm] = useState({ label: '', sub: '' })
 
   useEffect(() => { loadGallery() }, [])
 
@@ -136,47 +138,74 @@ function GalleryTab() {
     }
   }
 
-  // Merge: ogni default + override Firestore (ID = label)
+  // Merge: _id = doc ID Firestore (immutabile), label = nome display (può essere rinominato)
   const defaultLabels = new Set(DEFAULT_GALLERY.map(g => g.label))
   const mergedDefaults = DEFAULT_GALLERY.map(g => {
     const ov = overrides?.[g.label]
     return ov
-      ? { ...g, url: ov.url, sub: ov.sub || g.sub, type: ov.type || 'image', hasOverride: true }
-      : { ...g, url: g.img, type: 'image', hasOverride: false }
+      ? { ...g, _id: g.label, label: ov.label || g.label, url: ov.url, sub: ov.sub || g.sub, type: ov.type || 'image', hasOverride: true }
+      : { ...g, _id: g.label, url: g.img, type: 'image', hasOverride: false }
   })
-  // Elementi extra aggiunti dall'admin (non presenti nei default)
   const extraItems = Object.entries(overrides || {})
     .filter(([id]) => !defaultLabels.has(id))
-    .map(([id, data]) => ({ label: id, sub: data.sub, url: data.url, type: data.type || 'image', hasOverride: true, isExtra: true }))
+    .map(([id, data]) => ({ _id: id, label: data.label || id, sub: data.sub, url: data.url, type: data.type || 'image', hasOverride: true, isExtra: true }))
   const displayItems = [...mergedDefaults, ...extraItems]
 
   /* Sostituisci file */
   const handleReplace = async (item, file) => {
-    setReplacing(item.label)
-    setUploadMsg(m => ({ ...m, [item.label]: '' }))
+    setReplacing(item._id)
+    setUploadMsg(m => ({ ...m, [item._id]: '' }))
     try {
       const uploaded = await uploadToCloudinary(file)
-      // Doc ID = label → upsert diretto, nessun batch
-      await setDoc(doc(db, 'gallery', item.label), {
+      await setDoc(doc(db, 'gallery', item._id), {
         label: item.label, sub: item.sub,
         url: uploaded.url, publicId: uploaded.publicId, type: uploaded.type,
         updatedAt: new Date().toISOString(),
       })
-      setUploadMsg(m => ({ ...m, [item.label]: 'ok' }))
+      setUploadMsg(m => ({ ...m, [item._id]: 'ok' }))
       loadGallery()
     } catch (err) {
-      setUploadMsg(m => ({ ...m, [item.label]: err.message }))
+      setUploadMsg(m => ({ ...m, [item._id]: err.message }))
     } finally {
       setReplacing(null)
     }
   }
 
   /* Ripristina default (elimina override) */
-  const handleReset = async (label) => {
+  const handleReset = async (id) => {
     if (!confirm('Ripristinare la foto originale?')) return
-    await deleteDoc(doc(db, 'gallery', label))
-    setUploadMsg(m => ({ ...m, [label]: '' }))
+    await deleteDoc(doc(db, 'gallery', id))
+    setUploadMsg(m => ({ ...m, [id]: '' }))
     loadGallery()
+  }
+
+  /* Modifica label/sub inline */
+  const startEditMeta = (item) => {
+    setEditingMeta(item._id)
+    setEditForm({ label: item.label, sub: item.sub || '' })
+  }
+
+  const handleSaveMeta = async (item) => {
+    const { label: newLabel, sub: newSub } = editForm
+    try {
+      const existingData = overrides?.[item._id] || {}
+      if (item.isExtra && newLabel !== item.label) {
+        // extra rinominato: cancella vecchio doc ID, crea nuovo
+        await deleteDoc(doc(db, 'gallery', item._id))
+        await setDoc(doc(db, 'gallery', newLabel), { ...existingData, label: newLabel, sub: newSub, updatedAt: new Date().toISOString() })
+      } else {
+        // default o extra senza cambio ID: aggiorna label/sub nel doc esistente
+        await setDoc(doc(db, 'gallery', item._id), {
+          ...existingData,
+          label: newLabel,
+          sub: newSub,
+          url: existingData.url || item.url || '',
+          updatedAt: new Date().toISOString(),
+        })
+      }
+      setEditingMeta(null)
+      loadGallery()
+    } catch (err) { console.error(err) }
   }
 
   /* Aggiungi elemento extra (non è un default) */
@@ -231,13 +260,13 @@ function GalleryTab() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
         {displayItems.map(item => {
-          const isReplacing = replacing === item.label
-          const msg = uploadMsg[item.label]
+          const isReplacing = replacing === item._id
+          const msg = uploadMsg[item._id]
           const isVideo = item.type === 'video'
           const srcUrl = item.url
 
           return (
-            <div key={item.label} style={{ background: '#161616', border: `1px solid ${msg === 'ok' ? 'rgba(76,175,80,0.35)' : item.hasOverride ? 'rgba(196,18,48,0.25)' : 'rgba(255,255,255,0.05)'}`, overflow: 'hidden' }}>
+            <div key={item._id} style={{ background: '#161616', border: `1px solid ${msg === 'ok' ? 'rgba(76,175,80,0.35)' : item.hasOverride ? 'rgba(196,18,48,0.25)' : 'rgba(255,255,255,0.05)'}`, overflow: 'hidden' }}>
               <div style={{ position: 'relative', aspectRatio: '1' }}>
                 {isVideo
                   ? <video src={srcUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: isReplacing ? 0.4 : 1 }} muted playsInline />
@@ -249,13 +278,13 @@ function GalleryTab() {
                   </div>
                 )}
                 {item.isExtra && (
-                  <button onClick={() => handleReset(item.label)} title="Elimina"
+                  <button onClick={() => handleReset(item._id)} title="Elimina"
                     style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(196,18,48,0.85)', border: 'none', color: '#fff', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <Trash2 size={12} />
                   </button>
                 )}
                 {item.hasOverride && !item.isExtra && (
-                  <button onClick={() => handleReset(item.label)} title="Ripristina default"
+                  <button onClick={() => handleReset(item._id)} title="Ripristina default"
                     style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.7)', border: 'none', color: 'rgba(245,240,234,0.6)', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.6rem' }}>
                     ↩
                   </button>
@@ -267,19 +296,35 @@ function GalleryTab() {
                 )}
               </div>
               <div style={{ padding: '0.75rem' }}>
-                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', fontWeight: 600, color: '#F5F0EA', marginBottom: '0.1rem' }}>{item.label}</div>
-                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.56rem', color: '#C41230', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>{item.sub}</div>
-                {msg === 'ok'
-                  ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.62rem', color: '#4caf50', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={11} /> Aggiornato!</p>
-                  : msg ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.62rem', color: '#C41230', margin: 0 }}>Errore: {msg}</p>
-                  : (
-                    <label style={{ ...btnSecondary, display: 'flex', cursor: isReplacing ? 'not-allowed' : 'pointer', justifyContent: 'center', padding: '0.45rem 0.75rem', opacity: isReplacing ? 0.5 : 1 }}>
-                      <Upload size={11} style={{ marginRight: '0.35rem' }} /> Sostituisci
-                      <input type="file" accept="image/*,video/*" style={{ display: 'none' }} disabled={isReplacing}
-                        onChange={e => { if (e.target.files[0]) handleReplace(item, e.target.files[0]) }} />
-                    </label>
-                  )
-                }
+                {editingMeta === item._id ? (
+                  <div>
+                    <input value={editForm.label} onChange={e => setEditForm(p => ({ ...p, label: e.target.value }))} placeholder="Titolo" style={{ ...inputStyle, fontSize: '0.65rem', padding: '0.35rem 0.5rem', marginBottom: '0.4rem', width: '100%', boxSizing: 'border-box' }} />
+                    <input value={editForm.sub} onChange={e => setEditForm(p => ({ ...p, sub: e.target.value }))} placeholder="Categoria" style={{ ...inputStyle, fontSize: '0.65rem', padding: '0.35rem 0.5rem', marginBottom: '0.5rem', width: '100%', boxSizing: 'border-box' }} />
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button onClick={() => handleSaveMeta(item)} style={{ ...btnPrimary, padding: '0.3rem 0.6rem', fontSize: '0.58rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Check size={10} /> Salva</button>
+                      <button onClick={() => setEditingMeta(null)} style={{ ...btnSecondary, padding: '0.3rem 0.6rem', fontSize: '0.58rem', display: 'flex', alignItems: 'center' }}><X size={10} /></button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.1rem' }}>
+                      <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', fontWeight: 600, color: '#F5F0EA' }}>{item.label}</div>
+                      <button onClick={() => startEditMeta(item)} title="Modifica nome/categoria" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(245,240,234,0.3)', padding: '0 0 0 0.4rem', lineHeight: 1 }}><Pencil size={11} /></button>
+                    </div>
+                    <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.56rem', color: '#C41230', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>{item.sub}</div>
+                    {msg === 'ok'
+                      ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.62rem', color: '#4caf50', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={11} /> Aggiornato!</p>
+                      : msg ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.62rem', color: '#C41230', margin: 0 }}>Errore: {msg}</p>
+                      : (
+                        <label style={{ ...btnSecondary, display: 'flex', cursor: isReplacing ? 'not-allowed' : 'pointer', justifyContent: 'center', padding: '0.45rem 0.75rem', opacity: isReplacing ? 0.5 : 1 }}>
+                          <Upload size={11} style={{ marginRight: '0.35rem' }} /> Sostituisci
+                          <input type="file" accept="image/*,video/*" style={{ display: 'none' }} disabled={isReplacing}
+                            onChange={e => { if (e.target.files[0]) handleReplace(item, e.target.files[0]) }} />
+                        </label>
+                      )
+                    }
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -485,6 +530,14 @@ function InfoTab() {
     }
   }
 
+  const handleMediaReset = async (field) => {
+    if (!confirm('Ripristinare il file di default del codice?')) return
+    const newInfo = { ...info, [field]: '' }
+    setInfo(newInfo)
+    await setDoc(doc(db, 'info', INFO_ID), newInfo)
+    setMediaMsg(m => ({ ...m, [field]: '' }))
+  }
+
   const handleMediaUpload = async (field, file) => {
     setMediaUploading(m => ({ ...m, [field]: true }))
     setMediaMsg(m => ({ ...m, [field]: '' }))
@@ -577,7 +630,12 @@ function InfoTab() {
               </div>
               {/* Info + upload */}
               <div style={{ padding: '0.85rem' }}>
-                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', fontWeight: 600, color: '#F5F0EA', marginBottom: '0.65rem' }}>{label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                  <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', fontWeight: 600, color: '#F5F0EA' }}>{label}</div>
+                  {current && (
+                    <button onClick={() => handleMediaReset(key)} title="Ripristina default" style={{ ...btnSecondary, padding: '0.3rem 0.5rem', fontSize: '0.7rem', lineHeight: 1 }}>↩</button>
+                  )}
+                </div>
                 {mMsg === 'ok'
                   ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: '#4caf50', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={12} /> Aggiornato!</p>
                   : mMsg
