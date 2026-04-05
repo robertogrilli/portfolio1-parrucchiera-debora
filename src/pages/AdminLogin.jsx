@@ -72,7 +72,7 @@ export default function AdminLogin() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <a href="/" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: 'rgba(245,240,234,0.3)', textDecoration: 'none' }}>
+          <a href="#/" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: 'rgba(245,240,234,0.3)', textDecoration: 'none' }}>
             ← Torna al sito
           </a>
         </p>

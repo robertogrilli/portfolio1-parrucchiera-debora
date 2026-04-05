@@ -9,6 +9,19 @@ import { LogOut, Image, Tag, Info, Trash2, Plus, Upload, Check, X } from 'lucide
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+const BASE = import.meta.env.BASE_URL
+
+const DEFAULT_GALLERY = [
+  { label: 'Balayage Naturale',      sub: 'Colore',      img: `${BASE}lavori/Balayage Naturale.jpg` },
+  { label: 'Bob Liscio',             sub: 'Taglio',      img: `${BASE}lavori/Bob Liscio.jpg` },
+  { label: 'Onde Morbide',           sub: 'Piega',       img: `${BASE}lavori/Onde Morbide.jpg` },
+  { label: 'Colorazione Ramata',     sub: 'Colore',      img: `${BASE}lavori/Colorazione Ramata.jpg` },
+  { label: 'Capelli Ricci Definiti', sub: 'Trattamento', img: `${BASE}lavori/Capelli Ricci Definiti.jpg` },
+  { label: 'Pixie Cut',              sub: 'Taglio',      img: `${BASE}lavori/Pixie Cut.jpg` },
+  { label: 'Highlights Biondi',      sub: 'Colore',      img: `${BASE}lavori/Highlights Biondi.jpg` },
+  { label: 'Beach Waves',            sub: 'Piega',       img: `${BASE}lavori/Beach Waves.jpg` },
+  { label: 'Castano Cioccolato',     sub: 'Colore',      img: `${BASE}lavori/Castano Cioccolato.jpg` },
+]
 
 /* ─── TABS ─────────────────────────────────────── */
 const TABS = [
@@ -35,7 +48,7 @@ export default function AdminDashboard() {
           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C41230', margin: '0.25rem 0 0' }}>Parrucchieria Debora</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <a href="/" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: 'rgba(245,240,234,0.4)', textDecoration: 'none' }}>← Sito pubblico</a>
+          <a href="#/" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: 'rgba(245,240,234,0.4)', textDecoration: 'none' }}>← Sito pubblico</a>
           <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'transparent', border: '1px solid rgba(196,18,48,0.3)', color: '#C41230', padding: '0.5rem 1rem', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             <LogOut size={14} /> Esci
           </button>
@@ -64,109 +77,201 @@ export default function AdminDashboard() {
 
 /* ─── GALLERY TAB ───────────────────────────────── */
 function GalleryTab() {
-  const [items, setItems] = useState([])
-  const [uploading, setUploading] = useState(false)
+  const [firestoreItems, setFirestoreItems] = useState(null) // null = loading
+  const [replacing, setReplacing] = useState(null) // id o label dell'item in sostituzione
+  const [uploadMsg, setUploadMsg] = useState({})
+  const [showAddForm, setShowAddForm] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [newSub, setNewSub] = useState('')
-  const [file, setFile] = useState(null)
-  const [msg, setMsg] = useState('')
+  const [addMsg, setAddMsg] = useState('')
+  const [addUploading, setAddUploading] = useState(false)
 
   useEffect(() => { loadGallery() }, [])
 
   const loadGallery = async () => {
     const snap = await getDocs(collection(db, 'gallery'))
-    setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    setFirestoreItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
   }
 
-  const handleUpload = async (e) => {
-    e.preventDefault()
-    if (!file || !newLabel) return
-    setUploading(true)
-    setMsg('')
+  // Foto visibili: se Firestore ha dati usa quelli, altrimenti default
+  const displayItems = firestoreItems && firestoreItems.length > 0
+    ? firestoreItems.map(i => ({ ...i, isDefault: false }))
+    : DEFAULT_GALLERY.map(i => ({ ...i, isDefault: true }))
+
+  const uploadToCloudinary = async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', UPLOAD_PRESET)
+    formData.append('folder', 'parrucchiera-debora/gallery')
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData })
+    const data = await res.json()
+    if (data.error) throw new Error(data.error.message)
+    return data
+  }
+
+  const handleReplace = async (item, file) => {
+    const key = item.id || item.label
+    setReplacing(key)
+    setUploadMsg(m => ({ ...m, [key]: '' }))
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('upload_preset', UPLOAD_PRESET)
-      formData.append('folder', 'parrucchiera-debora/gallery')
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error.message)
-
-      await addDoc(collection(db, 'gallery'), {
-        label: newLabel,
-        sub: newSub || 'Lavoro',
-        url: data.secure_url,
-        publicId: data.public_id,
-        createdAt: new Date().toISOString(),
-      })
-      setNewLabel('')
-      setNewSub('')
-      setFile(null)
-      e.target.reset()
-      setMsg('Foto caricata con successo!')
+      const data = await uploadToCloudinary(file)
+      if (item.isDefault) {
+        // Crea nuovo doc Firestore per questa foto
+        await addDoc(collection(db, 'gallery'), {
+          label: item.label, sub: item.sub,
+          url: data.secure_url, publicId: data.public_id,
+          createdAt: new Date().toISOString(),
+        })
+      } else {
+        // Aggiorna doc esistente
+        await updateDoc(doc(db, 'gallery', item.id), {
+          url: data.secure_url, publicId: data.public_id,
+          updatedAt: new Date().toISOString(),
+        })
+      }
+      setUploadMsg(m => ({ ...m, [key]: 'ok' }))
       loadGallery()
     } catch (err) {
-      setMsg('Errore: ' + err.message)
+      setUploadMsg(m => ({ ...m, [key]: 'Errore: ' + err.message }))
     } finally {
-      setUploading(false)
+      setReplacing(null)
     }
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Eliminare questa foto?')) return
+    if (!confirm('Eliminare questa foto dalla galleria?')) return
     await deleteDoc(doc(db, 'gallery', id))
     loadGallery()
   }
 
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    const file = e.target.querySelector('input[type=file]').files[0]
+    if (!file || !newLabel) return
+    setAddUploading(true)
+    setAddMsg('')
+    try {
+      const data = await uploadToCloudinary(file)
+      await addDoc(collection(db, 'gallery'), {
+        label: newLabel, sub: newSub || 'Lavoro',
+        url: data.secure_url, publicId: data.public_id,
+        createdAt: new Date().toISOString(),
+      })
+      setNewLabel(''); setNewSub('')
+      e.target.reset()
+      setAddMsg('Foto aggiunta!')
+      setShowAddForm(false)
+      loadGallery()
+    } catch (err) {
+      setAddMsg('Errore: ' + err.message)
+    } finally {
+      setAddUploading(false)
+    }
+  }
+
+  if (firestoreItems === null) return <p style={{ color: 'rgba(245,240,234,0.4)', fontFamily: 'Montserrat, sans-serif' }}>Caricamento...</p>
+
+  const usingDefaults = firestoreItems.length === 0
+
   return (
     <div>
-      <h2 style={sectionTitle}>Gestione Galleria</h2>
-
-      {/* Upload form */}
-      <form onSubmit={handleUpload} style={{ background: '#161616', padding: '1.5rem', marginBottom: '2rem', border: '1px solid rgba(196,18,48,0.1)' }}>
-        <h3 style={subTitle}>Aggiungi nuova foto</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-          <div>
-            <label style={labelStyle}>Titolo *</label>
-            <input value={newLabel} onChange={e => setNewLabel(e.target.value)} required placeholder="es. Balayage Naturale" style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Categoria</label>
-            <input value={newSub} onChange={e => setNewSub(e.target.value)} placeholder="es. Colore, Taglio, Piega" style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Immagine *</label>
-            <input type="file" accept="image/*" onChange={e => setFile(e.target.files[0])} required style={{ ...inputStyle, padding: '0.5rem' }} />
-          </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2 style={{ ...sectionTitle, marginBottom: '0.25rem' }}>Gestione Galleria</h2>
+          {usingDefaults && (
+            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', color: 'rgba(245,240,234,0.35)', margin: 0 }}>
+              Stai vedendo le foto predefinite. Clicca "Sostituisci" su una foto per caricare la tua versione.
+            </p>
+          )}
         </div>
-        {msg && <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.75rem', color: msg.startsWith('Errore') ? '#C41230' : '#4caf50', marginBottom: '1rem' }}>{msg}</p>}
-        <button type="submit" disabled={uploading} style={btnPrimary}>
-          <Upload size={14} /> {uploading ? 'Caricamento...' : 'Carica foto'}
+        <button onClick={() => setShowAddForm(s => !s)} style={btnPrimary}>
+          <Plus size={14} /> Aggiungi nuova
         </button>
-      </form>
-
-      {/* Gallery grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-        {items.map(item => (
-          <div key={item.id} style={{ position: 'relative', background: '#161616', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <img src={item.url} alt={item.label} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
-            <div style={{ padding: '0.75rem' }}>
-              <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.7rem', fontWeight: 600, color: '#F5F0EA', marginBottom: '0.2rem' }}>{item.label}</div>
-              <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.6rem', color: '#C41230', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.sub}</div>
-            </div>
-            <button onClick={() => handleDelete(item.id)} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(196,18,48,0.85)', border: 'none', color: '#fff', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: 2 }}>
-              <Trash2 size={13} />
-            </button>
-          </div>
-        ))}
-        {items.length === 0 && (
-          <p style={{ color: 'rgba(245,240,234,0.3)', fontFamily: 'Montserrat, sans-serif', fontSize: '0.8rem', gridColumn: '1/-1' }}>Nessuna foto in galleria. Carica la prima!</p>
-        )}
       </div>
+
+      {/* Form aggiungi nuova */}
+      {showAddForm && (
+        <form onSubmit={handleAdd} style={{ background: '#161616', padding: '1.5rem', marginBottom: '2rem', border: '1px solid rgba(196,18,48,0.2)' }}>
+          <h3 style={subTitle}>Nuova foto</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <label style={labelStyle}>Titolo *</label>
+              <input value={newLabel} onChange={e => setNewLabel(e.target.value)} required placeholder="es. Balayage Naturale" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Categoria</label>
+              <input value={newSub} onChange={e => setNewSub(e.target.value)} placeholder="es. Colore, Taglio" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Foto *</label>
+              <input type="file" accept="image/*" required style={{ ...inputStyle, padding: '0.5rem' }} />
+            </div>
+          </div>
+          {addMsg && <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.75rem', color: addMsg.startsWith('Errore') ? '#C41230' : '#4caf50', marginBottom: '1rem' }}>{addMsg}</p>}
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button type="submit" disabled={addUploading} style={btnPrimary}><Upload size={13} /> {addUploading ? 'Caricamento...' : 'Carica'}</button>
+            <button type="button" onClick={() => setShowAddForm(false)} style={btnSecondary}><X size={13} /> Annulla</button>
+          </div>
+        </form>
+      )}
+
+      {/* Griglia foto */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
+        {displayItems.map(item => {
+          const key = item.id || item.label
+          const isReplacing = replacing === key
+          const msg = uploadMsg[key]
+          return (
+            <div key={key} style={{ background: '#161616', border: `1px solid ${msg === 'ok' ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.05)'}`, overflow: 'hidden' }}>
+              {/* Foto corrente */}
+              <div style={{ position: 'relative', aspectRatio: '1' }}>
+                <img
+                  src={item.isDefault ? item.img : item.url}
+                  alt={item.label}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: isReplacing ? 0.4 : 1, transition: 'opacity 0.3s' }}
+                />
+                {item.isDefault && (
+                  <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.7)', padding: '0.2rem 0.5rem' }}>
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(245,240,234,0.5)' }}>Predefinita</span>
+                  </div>
+                )}
+                {isReplacing && (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 32, height: 32, border: '3px solid rgba(196,18,48,0.3)', borderTopColor: '#C41230', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  </div>
+                )}
+                {!item.isDefault && (
+                  <button onClick={() => handleDelete(item.id)} title="Elimina"
+                    style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(196,18,48,0.85)', border: 'none', color: '#fff', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Info + azioni */}
+              <div style={{ padding: '0.85rem' }}>
+                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.72rem', fontWeight: 600, color: '#F5F0EA', marginBottom: '0.15rem' }}>{item.label}</div>
+                <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.58rem', color: '#C41230', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>{item.sub}</div>
+
+                {msg === 'ok'
+                  ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: '#4caf50', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={12} /> Aggiornata!</p>
+                  : msg
+                    ? <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '0.65rem', color: '#C41230', margin: 0 }}>{msg}</p>
+                    : (
+                      <label style={{ ...btnSecondary, display: 'flex', cursor: 'pointer', justifyContent: 'center', opacity: isReplacing ? 0.5 : 1 }}>
+                        <Upload size={12} style={{ marginRight: '0.4rem' }} />
+                        Sostituisci foto
+                        <input type="file" accept="image/*" style={{ display: 'none' }} disabled={isReplacing}
+                          onChange={e => { if (e.target.files[0]) handleReplace(item, e.target.files[0]) }} />
+                      </label>
+                    )
+                }
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }
