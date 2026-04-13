@@ -720,7 +720,7 @@ function Reviews() {
             <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.72rem',fontWeight:300,color:'rgba(245,240,234,0.45)',lineHeight:1.7,margin:0 }}>
               La tua opinione aiuta altre clienti a sceglierci e ci spinge a fare sempre meglio.
             </p>
-            <a href="https://search.google.com/local/writereview?placeid=0x1331f0d97c4cd84f:0x23d4495b50e31431"
+            <a href="https://maps.google.com/?cid=2581769142938047537&action=write-review"
               target="_blank" rel="noreferrer"
               style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.65rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.85rem 2rem',textDecoration:'none',transition:'all 0.3s ease',marginTop:'0.5rem' }}
               onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(196,18,48,0.4)'}}
