@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
+import { initGA, trackPageView } from './utils/analytics'
 import {
   Scissors, Star, MapPin, Phone, Clock,
   ChevronDown, Menu, X, Sparkles, Award, Heart, Zap, Check,
@@ -10,6 +12,8 @@ import { db } from './firebase'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import CookieBanner from './components/CookieBanner'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 /* ─── CONSTANTS ─────────────────────────────── */
 const BASE = import.meta.env.BASE_URL
@@ -293,7 +297,10 @@ function Navbar() {
 function Hero() {
   const scrollY = useScrollY()
   const info = useInfo()
-  const heroSrc = info?.heroVideo || `${BASE}hero.mp4`
+  const rawHeroSrc = info?.heroVideo || `${BASE}hero.mp4`
+  const heroSrc = rawHeroSrc.includes('res.cloudinary.com')
+    ? rawHeroSrc.replace('/upload/', '/upload/q_auto:low,w_1280,vc_h264/')
+    : rawHeroSrc
   return (
     <section id="home" style={{ minHeight:'100vh',position:'relative',display:'flex',alignItems:'center',background:'#0e0e0e',overflow:'hidden' }}>
 
@@ -341,17 +348,10 @@ function Hero() {
           </p>
 
           <div style={{ display:'flex',gap:'1rem',flexWrap:'wrap',animation:'fadeUp 0.9s 0.55s ease both' }}>
-            <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
+            <a href={buildPhoneLink(info?.telefono)}
               style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'1rem 2.4rem',textDecoration:'none',transition:'all 0.35s ease' }}
               onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 12px 35px rgba(196,18,48,0.45)'}}
               onMouseLeave={e=>{e.currentTarget.style.background='#C41230';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='none'}}
-            >
-              <MessageCircle size={15}/> Scrivimi su WhatsApp
-            </a>
-            <a href={buildPhoneLink(info?.telefono)}
-              style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'transparent',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:600,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'1rem 2.2rem',textDecoration:'none',border:'1.5px solid rgba(245,240,234,0.35)',transition:'all 0.35s ease' }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor='#F5F0EA';e.currentTarget.style.background='rgba(245,240,234,0.06)'}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(245,240,234,0.35)';e.currentTarget.style.background='transparent'}}
             >
               <Phone size={14}/> Chiamami
             </a>
@@ -787,14 +787,9 @@ function CTABanner() {
           Pronta per il tuo<br/><span style={{ fontStyle:'italic',fontWeight:600 }}>nuovo look?</span>
         </h2>
         <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.88rem',fontWeight:300,color:'rgba(245,240,234,0.8)',lineHeight:1.85,maxWidth:460,margin:'0 auto 2.5rem' }}>
-          Scrivimi su WhatsApp e insieme troviamo il giorno e il servizio giusto per te — senza fretta, senza coda.
+          Chiamaci e insieme troviamo il giorno e il servizio giusto per te — senza fretta, senza coda.
         </p>
         <div style={{ display:'flex',gap:'1rem',justifyContent:'center',flexWrap:'wrap' }}>
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
-            style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#F5F0EA',color:'#C41230',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.9rem 2.5rem',textDecoration:'none',transition:'all 0.3s ease' }}
-            onMouseEnter={e=>{e.currentTarget.style.background='#1C1C1C';e.currentTarget.style.color='#F5F0EA'}}
-            onMouseLeave={e=>{e.currentTarget.style.background='#F5F0EA';e.currentTarget.style.color='#C41230'}}
-          ><MessageCircle size={15}/> Scrivimi su WhatsApp</a>
           <a href={buildPhoneLink(info?.telefono)}
             style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'transparent',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:600,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.9rem 2.5rem',textDecoration:'none',border:'1.5px solid rgba(245,240,234,0.55)',transition:'all 0.3s ease' }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor='#F5F0EA';e.currentTarget.style.background='rgba(245,240,234,0.1)'}}
@@ -828,11 +823,6 @@ function Contact() {
 
         {/* CTA buttons */}
         <div style={{ display:'flex',gap:'1rem',justifyContent:'center',flexWrap:'wrap',marginTop:'3.5rem' }}>
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
-            style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#25D366',color:'#fff',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'1rem 2.5rem',textDecoration:'none',transition:'all 0.35s ease' }}
-            onMouseEnter={e=>{e.currentTarget.style.background='#1da851';e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 10px 28px rgba(37,211,102,0.35)'}}
-            onMouseLeave={e=>{e.currentTarget.style.background='#25D366';e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='none'}}
-          ><MessageCircle size={16}/> Scrivimi su WhatsApp</a>
           <a href={buildPhoneLink(info?.telefono)}
             style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'transparent',color:'#C41230',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'1rem 2.5rem',textDecoration:'none',border:'1.5px solid #C41230',transition:'all 0.35s ease' }}
             onMouseEnter={e=>{e.currentTarget.style.background='#C41230';e.currentTarget.style.color='#F5F0EA';e.currentTarget.style.transform='translateY(-3px)'}}
@@ -909,12 +899,14 @@ function Footer() {
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)',paddingTop:'1.75rem',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'1rem' }}>
           <span style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.62rem',color:'rgba(245,240,234,0.18)' }}>© 2025 Parrucchieria Debora di Carboni Debora — P.IVA 01779990447</span>
           <div style={{ display:'flex',gap:'2rem' }}>
-            {['Privacy Policy','Cookie Policy'].map(l=>(
-              <a key={l} href="#" style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.62rem',color:'rgba(245,240,234,0.18)',textDecoration:'none',transition:'color 0.3s' }}
-                onMouseEnter={e=>e.currentTarget.style.color='#C41230'}
-                onMouseLeave={e=>e.currentTarget.style.color='rgba(245,240,234,0.18)'}
-              >{l}</a>
-            ))}
+            <a href="#/privacy" style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.62rem',color:'rgba(245,240,234,0.18)',textDecoration:'none',transition:'color 0.3s' }}
+              onMouseEnter={e=>e.currentTarget.style.color='#C41230'}
+              onMouseLeave={e=>e.currentTarget.style.color='rgba(245,240,234,0.18)'}
+            >Privacy Policy</a>
+            <a href="#/privacy" style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.62rem',color:'rgba(245,240,234,0.18)',textDecoration:'none',transition:'color 0.3s' }}
+              onMouseEnter={e=>e.currentTarget.style.color='#C41230'}
+              onMouseLeave={e=>e.currentTarget.style.color='rgba(245,240,234,0.18)'}
+            >Cookie Policy</a>
           </div>
         </div>
       </div>
@@ -962,8 +954,20 @@ function Home() {
     }).catch(() => {})
   }, [])
 
+  const siteUrl = 'https://www.parrucchieriadebora.it'
+
   return (
     <InfoCtx.Provider value={info}>
+      <Helmet>
+        <title>Parrucchieria Debora — Salone ad Ascoli Piceno</title>
+        <meta name="description" content="Parrucchieria Debora ad Ascoli Piceno: tagli, colorazioni, trattamenti e styling professionale da oltre 20 anni. Prenota il tuo appuntamento." />
+        <meta property="og:title" content="Parrucchieria Debora — Salone ad Ascoli Piceno" />
+        <meta property="og:description" content="Il tuo salone di fiducia ad Ascoli Piceno da oltre 20 anni. Tagli, colorazioni, trattamenti e styling professionale." />
+        <meta property="og:image" content={`${siteUrl}/favicon.svg`} />
+        <meta property="og:url" content={siteUrl} />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="index, follow" />
+      </Helmet>
       <Navbar/>
       <Hero/>
       <Stats/>
@@ -978,15 +982,49 @@ function Home() {
   )
 }
 
+/* ─── GA4 TRACKER ────────────────────────────── */
+const EXCLUDED_PATHS = ['/admin', '/admin/dashboard']
+
+function GATracker() {
+  const location = useLocation()
+  useEffect(() => {
+    const consent = localStorage.getItem('cookie_consent')
+    if (consent !== 'accepted') return
+    const path = location.pathname
+    if (EXCLUDED_PATHS.includes(path)) return
+    trackPageView(path)
+  }, [location])
+
+  useEffect(() => {
+    function onConsent() {
+      initGA()
+      trackPageView(window.location.hash.replace('#', '') || '/')
+    }
+    window.addEventListener('cookie_consent_update', onConsent)
+    return () => window.removeEventListener('cookie_consent_update', onConsent)
+  }, [])
+
+  useEffect(() => {
+    if (localStorage.getItem('cookie_consent') === 'accepted') initGA()
+  }, [])
+
+  return null
+}
+
 /* ─── APP ────────────────────────────────────── */
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home/>}/>
-      <Route path="/admin" element={<AdminLogin/>}/>
-      <Route path="/admin/dashboard" element={
-        <ProtectedRoute><AdminDashboard/></ProtectedRoute>
-      }/>
-    </Routes>
+    <>
+      <GATracker/>
+      <Routes>
+        <Route path="/" element={<Home/>}/>
+        <Route path="/privacy" element={<PrivacyPolicy/>}/>
+        <Route path="/admin" element={<AdminLogin/>}/>
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute><AdminDashboard/></ProtectedRoute>
+        }/>
+      </Routes>
+      <CookieBanner/>
+    </>
   )
 }
