@@ -39,10 +39,10 @@ const DEFAULT_SERVICES = [
 
 const DEFAULT_GALLERY = [
   { label: 'Colorazione & Meches', sub: 'Colore',      img: `${BASE}lavori/portfolio1-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio1-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio1-prima.jpg`, badge: 'Prima' }] },
-  { label: 'Meches su Biondo',     sub: 'Colore',      img: `${BASE}lavori/portfolio2-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio2-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio2-prima.jpg`, badge: 'Prima' }] },
+  { label: 'Meches su Biondo',     sub: 'Colore',      img: `${BASE}lavori/portfolio2-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio2-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio2-prima.jpg`, badge: '' }] },
   { label: 'Acconciatura Sposa',   sub: 'Sposa',       img: `${BASE}lavori/portfolio3-sposa.jpg`,type: 'image', images: [{ url: `${BASE}lavori/portfolio3-sposa.jpg`, badge: '' }] },
-  { label: 'Permanente Ricci',     sub: 'Trattamenti', img: `${BASE}lavori/portfolio4-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio4-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio4-prima.jpg`, badge: 'Prima' }] },
-  { label: 'Silver Grey',          sub: 'Colore',      img: `${BASE}lavori/portfolio5-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio5-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio5-prima.jpg`, badge: 'Prima' }] },
+  { label: 'Permanente Ricci',     sub: 'Trattamenti', img: `${BASE}lavori/portfolio4-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio4-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio4-prima.jpg`, badge: '' }] },
+  { label: 'Silver Grey',          sub: 'Colore',      img: `${BASE}lavori/portfolio5-dopo.jpg`, type: 'image', images: [{ url: `${BASE}lavori/portfolio5-dopo.jpg`, badge: '' }, { url: `${BASE}lavori/portfolio5-prima.jpg`, badge: '' }] },
 ]
 
 /* ─── TABS ─────────────────────────────────────── */
@@ -127,6 +127,7 @@ function GalleryTab() {
   const [expandedSlides, setExpandedSlides] = useState(null)
   const [addingSlide, setAddingSlide] = useState(null)
   const [newSlide, setNewSlide] = useState({ badge: '' })
+  const [badgeEdits, setBadgeEdits] = useState({})
 
   useEffect(() => { loadGallery() }, [])
 
@@ -230,7 +231,7 @@ function GalleryTab() {
       images,
       updatedAt: new Date().toISOString(),
     })
-    loadGallery()
+    setOverrides(prev => ({ ...prev, [item._id]: { ...(prev?.[item._id] || {}), images } }))
   }
 
   /* Ripristina default */
@@ -426,8 +427,9 @@ function GalleryTab() {
                       <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#161616', padding: '0.4rem' }}>
                         <img src={sl.url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', flexShrink: 0 }} />
                         <input
-                          value={sl.badge || ''}
-                          onChange={e => handleUpdateBadge(item, idx, e.target.value)}
+                          value={badgeEdits[`${item._id}-${idx}`] ?? sl.badge ?? ''}
+                          onChange={e => setBadgeEdits(p => ({ ...p, [`${item._id}-${idx}`]: e.target.value }))}
+                          onBlur={e => handleUpdateBadge(item, idx, e.target.value)}
                           placeholder='Badge (es. "Prima")'
                           style={{ ...inputStyle, flex: 1, fontSize: '0.6rem', padding: '0.3rem 0.4rem' }}
                         />

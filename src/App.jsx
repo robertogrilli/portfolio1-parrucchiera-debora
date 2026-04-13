@@ -205,10 +205,10 @@ const reviews = [
 
 const galleryItems = [
   { label: 'Colorazione & Meches',  sub: 'Colore',      gradient: 'linear-gradient(160deg,#2c1810 0%,#7a4a2a 50%,#c49a6c 100%)', img: `${BASE}lavori/portfolio1-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio1-dopo.jpg` }, { src: `${BASE}lavori/portfolio1-prima.jpg`, badge: 'Prima' }] },
-  { label: 'Meches su Biondo',      sub: 'Colore',      gradient: 'linear-gradient(160deg,#3a2e00 0%,#8a7020 50%,#d4b84a 100%)', img: `${BASE}lavori/portfolio2-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio2-dopo.jpg` }, { src: `${BASE}lavori/portfolio2-prima.jpg`, badge: 'Prima' }] },
+  { label: 'Meches su Biondo',      sub: 'Colore',      gradient: 'linear-gradient(160deg,#3a2e00 0%,#8a7020 50%,#d4b84a 100%)', img: `${BASE}lavori/portfolio2-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio2-dopo.jpg` }, { src: `${BASE}lavori/portfolio2-prima.jpg` }] },
   { label: 'Acconciatura Sposa',    sub: 'Sposa',       gradient: 'linear-gradient(160deg,#1a0a10 0%,#4a1a28 50%,#8a3a50 100%)', img: `${BASE}lavori/portfolio3-sposa.jpg`, images: [{ src: `${BASE}lavori/portfolio3-sposa.jpg` }] },
-  { label: 'Permanente Ricci',      sub: 'Trattamenti', gradient: 'linear-gradient(160deg,#2a1e05 0%,#6a5015 50%,#b08830 100%)', img: `${BASE}lavori/portfolio4-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio4-dopo.jpg` }, { src: `${BASE}lavori/portfolio4-prima.jpg`, badge: 'Prima' }] },
-  { label: 'Silver Grey',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#1a1a1a 0%,#484848 50%,#909090 100%)', img: `${BASE}lavori/portfolio5-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio5-dopo.jpg` }, { src: `${BASE}lavori/portfolio5-prima.jpg`, badge: 'Prima' }] },
+  { label: 'Permanente Ricci',      sub: 'Trattamenti', gradient: 'linear-gradient(160deg,#2a1e05 0%,#6a5015 50%,#b08830 100%)', img: `${BASE}lavori/portfolio4-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio4-dopo.jpg` }, { src: `${BASE}lavori/portfolio4-prima.jpg` }] },
+  { label: 'Silver Grey',           sub: 'Colore',      gradient: 'linear-gradient(160deg,#1a1a1a 0%,#484848 50%,#909090 100%)', img: `${BASE}lavori/portfolio5-dopo.jpg`,  images: [{ src: `${BASE}lavori/portfolio5-dopo.jpg` }, { src: `${BASE}lavori/portfolio5-prima.jpg` }] },
 ]
 
 /* ─── GLOBAL STYLES ──────────────────────────── */
@@ -224,6 +224,19 @@ const GLOBAL_CSS = `
 `
 
 /* ─── NAVBAR ─────────────────────────────────── */
+const NAV_LINKS = [
+  { label: 'Chi Sono',     id: 'chi-sono' },
+  { label: 'Servizi',      id: 'servizi' },
+  { label: 'I Miei Lavori',id: 'i-miei-lavori' },
+  { label: 'Recensioni',   id: 'recensioni' },
+  { label: 'Contatti',     id: 'contatti' },
+]
+
+function scrollTo(id) {
+  const el = document.getElementById(id)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function Navbar() {
   const [open, setOpen] = useState(false)
   const scrollY = useScrollY()
@@ -231,17 +244,17 @@ function Navbar() {
   return (
     <nav style={{ position:'fixed',top:0,left:0,right:0,zIndex:1000, background:scrolled?'rgba(14,14,14,0.97)':'transparent', backdropFilter:scrolled?'blur(16px)':'none', borderBottom:scrolled?'1px solid rgba(196,18,48,0.18)':'none', padding:scrolled?'0.9rem 0':'1.5rem 0', transition:'all 0.45s ease' }}>
       <div style={{ maxWidth:1280,margin:'0 auto',padding:'0 2rem',display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-        <a href="#home" style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:'0.7rem' }}>
+        <button onClick={()=>scrollTo('home')} style={{ background:'none',border:'none',cursor:'pointer',textDecoration:'none',display:'flex',alignItems:'center',gap:'0.7rem',padding:0 }}>
           <img src={`${BASE}symbol.svg`} alt="" style={{ height:scrolled?'36px':'44px',width:'auto',transition:'height 0.4s ease' }}/>
           <span style={{ fontFamily:'"Cormorant Garamond",serif',fontSize:scrolled?'1.05rem':'1.2rem',fontWeight:600,color:'#F5F0EA',letterSpacing:'0.04em',transition:'font-size 0.4s ease' }}>Parrucchieria Debora</span>
-        </a>
+        </button>
         <div className="desk-nav" style={{ display:'flex',alignItems:'center',gap:'2.5rem' }}>
-          {['Chi Sono','Servizi','I Miei Lavori','Recensioni','Contatti'].map(l => (
-            <a key={l} href={`#${l.toLowerCase().replace(/ /g,'-')}`}
-              style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'#F5F0EA',textDecoration:'none',position:'relative',paddingBottom:'3px',transition:'color 0.3s' }}
+          {NAV_LINKS.map(({ label, id }) => (
+            <button key={id} onClick={()=>scrollTo(id)}
+              style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'#F5F0EA',background:'none',border:'none',cursor:'pointer',padding:'0 0 3px',transition:'color 0.3s' }}
               onMouseEnter={e=>e.currentTarget.style.color='#C41230'}
               onMouseLeave={e=>e.currentTarget.style.color='#F5F0EA'}
-            >{l}</a>
+            >{label}</button>
           ))}
           <a href={WA_LINK} target="_blank" rel="noreferrer"
             style={{ display:'inline-flex',alignItems:'center',gap:'0.5rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:600,fontSize:'0.62rem',letterSpacing:'0.18em',textTransform:'uppercase',padding:'0.65rem 1.4rem',textDecoration:'none',transition:'all 0.3s ease',animation:'pulseRed 3s infinite' }}
@@ -257,10 +270,10 @@ function Navbar() {
       </div>
       {open && (
         <div style={{ background:'rgba(14,14,14,0.98)',borderTop:'1px solid rgba(196,18,48,0.2)',padding:'1.5rem 2rem', animation:'fadeUp 0.3s ease' }}>
-          {['Chi Sono','Servizi','I Miei Lavori','Recensioni','Contatti'].map(l => (
-            <a key={l} href={`#${l.toLowerCase().replace(/ /g,'-')}`} onClick={()=>setOpen(false)}
-              style={{ display:'block',padding:'0.85rem 0',borderBottom:'1px solid rgba(255,255,255,0.05)',fontFamily:'Montserrat,sans-serif',fontSize:'0.7rem',fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'#F5F0EA',textDecoration:'none' }}
-            >{l}</a>
+          {NAV_LINKS.map(({ label, id }) => (
+            <button key={id} onClick={()=>{ scrollTo(id); setOpen(false) }}
+              style={{ display:'block',width:'100%',textAlign:'left',padding:'0.85rem 0',borderBottom:'1px solid rgba(255,255,255,0.05)',borderLeft:'none',borderRight:'none',borderTop:'none',fontFamily:'Montserrat,sans-serif',fontSize:'0.7rem',fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'#F5F0EA',background:'none',cursor:'pointer' }}
+            >{label}</button>
           ))}
           <a href={WA_LINK} target="_blank" rel="noreferrer" onClick={()=>setOpen(false)}
             style={{ display:'flex',alignItems:'center',gap:'0.5rem',marginTop:'1rem',padding:'0.85rem 0',fontFamily:'Montserrat,sans-serif',fontSize:'0.7rem',fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'#C41230',textDecoration:'none' }}
@@ -719,7 +732,7 @@ function Reviews() {
             <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.72rem',fontWeight:300,color:'rgba(245,240,234,0.45)',lineHeight:1.7,margin:0 }}>
               La tua opinione aiuta altre clienti a sceglierci e ci spinge a fare sempre meglio.
             </p>
-            <a href="https://www.google.com/maps/place/Parrucchieria+Debora+di+Carboni+Debora/@42.849746,13.5868388,17z/data=!4m6!3m5!1s0x1331f0d97c4cd84f:0x23d4495b50e31431!8m2!3d42.849746!4d13.5868388!16s%2Fg%2F119wj0y07"
+            <a href="https://www.google.com/maps/place/Parrucchieria+Debora+di+Carboni+Debora/@42.849746,13.5868388,17z/data=!4m6!3m5!1s0x1331f0d97c4cd84f:0x23d4495b50e31431!8m2!3d42.849746!4d13.5868388!16s%2Fg%2F119wj0y07?entry=ttu"
               target="_blank" rel="noreferrer"
               style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.65rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.85rem 2rem',textDecoration:'none',transition:'all 0.3s ease',marginTop:'0.5rem' }}
               onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(196,18,48,0.4)'}}
@@ -794,7 +807,7 @@ function Contact() {
   const [info, setInfo] = useState({
     indirizzo: "Via Celso Ulpiani, 15\n63100 Ascoli Piceno (AP)",
     telefono: "0736 342914",
-    orari: "Lun – Ven: 9:00 – 18:30\nSabato: 9:00 – 17:00\nDomenica: chiuso",
+    orari: "Lunedì: chiuso\nMartedì: 8:30 – 12:30 / 15:30 – 19:30\nMercoledì: 8:30 – 17:00\nGiovedì: 8:30 – 12:30 / 15:30 – 19:30\nVenerdì: 8:30 – 19:00\nSabato: 8:30 – 19:00\nDomenica: chiuso",
   })
 
   useEffect(() => {
