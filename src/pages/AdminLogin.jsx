@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { useState, useEffect } from 'react'
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useNavigate } from 'react-router-dom'
 import { Scissors } from 'lucide-react'
@@ -12,6 +12,16 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    setLoading(true)
+    getRedirectResult(auth)
+      .then(result => {
+        if (result?.user) navigate('/admin/dashboard')
+      })
+      .catch(() => setError('Accesso con Google non riuscito.'))
+      .finally(() => setLoading(false))
+  }, [navigate])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -27,17 +37,8 @@ export default function AdminLogin() {
     }
   }
 
-  const handleGoogle = async () => {
-    setError('')
-    setLoading(true)
-    try {
-      await signInWithPopup(auth, provider)
-      navigate('/admin/dashboard')
-    } catch (err) {
-      setError('Accesso con Google non riuscito.')
-    } finally {
-      setLoading(false)
-    }
+  const handleGoogle = () => {
+    signInWithRedirect(auth, provider)
   }
 
   return (
