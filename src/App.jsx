@@ -260,12 +260,12 @@ function Navbar() {
               onMouseLeave={e=>e.currentTarget.style.color='#F5F0EA'}
             >{label}</button>
           ))}
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
+          <a href={buildPhoneLink(info?.telefono)}
             style={{ display:'inline-flex',alignItems:'center',gap:'0.5rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:600,fontSize:'0.62rem',letterSpacing:'0.18em',textTransform:'uppercase',padding:'0.65rem 1.4rem',textDecoration:'none',transition:'all 0.3s ease',animation:'pulseRed 3s infinite' }}
             onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-2px)'}}
             onMouseLeave={e=>{e.currentTarget.style.background='#C41230';e.currentTarget.style.transform='translateY(0)'}}
           >
-            <MessageCircle size={13}/> Prenota
+            <Phone size={13}/> Prenota
           </a>
         </div>
         <button onClick={()=>setOpen(o=>!o)} className="mob-btn" style={{ display:'none',background:'none',border:'none',color:'#F5F0EA',cursor:'pointer',padding:'0.4rem' }}>
@@ -279,9 +279,9 @@ function Navbar() {
               style={{ display:'block',width:'100%',textAlign:'left',padding:'0.85rem 0',borderBottom:'1px solid rgba(255,255,255,0.05)',borderLeft:'none',borderRight:'none',borderTop:'none',fontFamily:'Montserrat,sans-serif',fontSize:'0.7rem',fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'#F5F0EA',background:'none',cursor:'pointer' }}
             >{label}</button>
           ))}
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer" onClick={()=>setOpen(false)}
+          <a href={buildPhoneLink(info?.telefono)} onClick={()=>setOpen(false)}
             style={{ display:'flex',alignItems:'center',gap:'0.5rem',marginTop:'1rem',padding:'0.85rem 0',fontFamily:'Montserrat,sans-serif',fontSize:'0.7rem',fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'#C41230',textDecoration:'none' }}
-          ><MessageCircle size={15}/> Prenota su WhatsApp</a>
+          ><Phone size={15}/> Chiama per prenotare</a>
         </div>
       )}
       <style>{GLOBAL_CSS}</style>
@@ -456,12 +456,12 @@ function About() {
               </div>
             ))}
           </div>
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
+          <a href={buildPhoneLink(info?.telefono)}
             style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.9rem 2.2rem',textDecoration:'none',transition:'all 0.35s ease' }}
             onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 10px 28px rgba(196,18,48,0.4)'}}
             onMouseLeave={e=>{e.currentTarget.style.background='#C41230';e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='none'}}
           >
-            <MessageCircle size={15}/> Prenota la tua visita
+            <Phone size={15}/> Prenota la tua visita
           </a>
         </div>
       </div>
@@ -511,12 +511,12 @@ function Services() {
         </div>
 
         <div style={{ textAlign:'center',marginTop:'4rem' }}>
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
+          <a href={buildPhoneLink(info?.telefono)}
             style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.9rem 2.4rem',textDecoration:'none',transition:'all 0.35s ease' }}
             onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-3px)'}}
             onMouseLeave={e=>{e.currentTarget.style.background='#C41230';e.currentTarget.style.transform='none'}}
           >
-            <MessageCircle size={15}/> Prenota la tua seduta
+            <Phone size={15}/> Prenota la tua seduta
           </a>
         </div>
       </div>
@@ -603,11 +603,11 @@ function Gallery() {
           <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.82rem',fontWeight:300,color:'#888',marginBottom:'1.5rem' }}>
             Vuoi un look come questi? Contattaci per prenotare la tua seduta.
           </p>
-          <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
+          <a href={buildPhoneLink(info?.telefono)}
             style={{ display:'inline-flex',alignItems:'center',gap:'0.6rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.68rem',letterSpacing:'0.2em',textTransform:'uppercase',padding:'0.9rem 2.4rem',textDecoration:'none',transition:'all 0.35s ease' }}
             onMouseEnter={e=>{e.currentTarget.style.background='#9E0E26';e.currentTarget.style.transform='translateY(-3px)'}}
             onMouseLeave={e=>{e.currentTarget.style.background='#C41230';e.currentTarget.style.transform='none'}}
-          ><MessageCircle size={15}/> Prenota adesso</a>
+          ><Phone size={15}/> Prenota adesso</a>
         </div>
       </div>
 
@@ -882,11 +882,11 @@ function Footer() {
             <p style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.75rem',fontWeight:300,color:'rgba(245,240,234,0.35)',lineHeight:1.85,marginBottom:'1.25rem' }}>
               Il tuo salone di fiducia ad Ascoli Piceno da oltre 20 anni.
             </p>
-            <a href={buildWaLink(info?.whatsapp)} target="_blank" rel="noreferrer"
-              style={{ display:'inline-flex',alignItems:'center',gap:'0.5rem',background:'#25D366',color:'#fff',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.6rem',letterSpacing:'0.15em',textTransform:'uppercase',padding:'0.6rem 1.2rem',textDecoration:'none',transition:'all 0.3s' }}
-              onMouseEnter={e=>e.currentTarget.style.background='#1da851'}
-              onMouseLeave={e=>e.currentTarget.style.background='#25D366'}
-            ><MessageCircle size={12}/> WhatsApp</a>
+            <a href={buildPhoneLink(info?.telefono)}
+              style={{ display:'inline-flex',alignItems:'center',gap:'0.5rem',background:'#C41230',color:'#F5F0EA',fontFamily:'Montserrat,sans-serif',fontWeight:700,fontSize:'0.6rem',letterSpacing:'0.15em',textTransform:'uppercase',padding:'0.6rem 1.2rem',textDecoration:'none',transition:'all 0.3s' }}
+              onMouseEnter={e=>e.currentTarget.style.background='#9E0E26'}
+              onMouseLeave={e=>e.currentTarget.style.background='#C41230'}
+            ><Phone size={12}/> Chiama</a>
           </div>
           <div>
             <div style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.6rem',fontWeight:700,letterSpacing:'0.25em',textTransform:'uppercase',color:'#C41230',marginBottom:'1.25rem' }}>Servizi</div>
