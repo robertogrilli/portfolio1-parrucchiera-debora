@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /admin/dashboard
 
-Sitemap: https://parrucchieriadebora.it/sitemap.xml
+Sitemap: https://www.parrucchieriadebora.it/sitemap.xml
