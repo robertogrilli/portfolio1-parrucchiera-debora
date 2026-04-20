@@ -299,16 +299,41 @@ function Hero() {
   const info = useInfo()
   const rawHeroSrc = info?.heroVideo || `${BASE}hero.mp4`
   const heroSrc = rawHeroSrc.includes('res.cloudinary.com')
-    ? rawHeroSrc.replace('/upload/', '/upload/q_auto:low,w_1280,vc_h264/')
+    ? rawHeroSrc.replace('/upload/', '/upload/q_auto:eco,w_720,vc_h264/')
     : rawHeroSrc
+  const heroPoster = rawHeroSrc.includes('res.cloudinary.com')
+    ? rawHeroSrc.replace('/upload/', '/upload/so_0,q_auto,w_720/').replace(/\.\w+$/, '.jpg')
+    : undefined
+  const videoRef = useRef(null)
+
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    const tryPlay = () => v.play().catch(() => {})
+    // Primo caricamento
+    if (v.readyState >= 2) {
+      tryPlay()
+    } else {
+      v.addEventListener('canplay', tryPlay, { once: true })
+    }
+    // BFCache Safari: pageshow con persisted=true significa che Safari ha
+    // ripristinato la pagina da cache congelata — il video è in pausa e
+    // useEffect non gira di nuovo, quindi bisogna forzare il play qui.
+    const onPageShow = (e) => { if (e.persisted) tryPlay() }
+    window.addEventListener('pageshow', onPageShow)
+    return () => {
+      v.removeEventListener('canplay', tryPlay)
+      window.removeEventListener('pageshow', onPageShow)
+    }
+  }, [])
+
   return (
     <section id="home" style={{ minHeight:'100vh',position:'relative',display:'flex',alignItems:'center',background:'#0e0e0e',overflow:'hidden' }}>
 
       {/* VIDEO BACKGROUND */}
-      <video key={heroSrc} autoPlay muted loop playsInline
-        style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',transform:`translateY(${scrollY*0.25}px) scale(1.1)`,transition:'transform 0.1s linear',pointerEvents:'none' }}>
-        <source src={heroSrc} type="video/mp4"/>
-      </video>
+      <video ref={videoRef} src={heroSrc} autoPlay muted loop playsInline preload="auto" poster={heroPoster}
+        style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',transform:`translateY(${scrollY*0.25}px) scale(1.1)`,willChange:'transform',pointerEvents:'none' }}
+      />
 
       {/* Layered overlays — dark base + brand red tint */}
       <div style={{ position:'absolute',inset:0,background:'linear-gradient(105deg,rgba(10,4,6,0.96) 0%,rgba(28,8,16,0.88) 50%,rgba(10,4,6,0.78) 100%)',pointerEvents:'none' }}/>
